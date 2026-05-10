@@ -87,4 +87,15 @@ protected static function booted()
     {
         return $this->hasMany(CustomerEvent::class);
     }
+
+
+    public function recoveryAttempts()
+    {
+        return $this->hasMany(RecoveryAttempt::class);
+    }
+
+    public function escalations()
+    {
+        return $this->hasMany(EscalationQueue::class);
+    }
 }
