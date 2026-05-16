@@ -6,17 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CODAssumption extends Model
+class CODPerformanceAssumption extends Model
 {
     use HasFactory;
 
+    protected $table = 'cod_assumptions';
+
     protected $fillable = [
         'business_unit_id',
+        'delivery_charge',
+        'return_charge',
         'expected_return_percentage',
-        'expected_return_courier_cost',
-        'expected_recovery_percentage',
-        'expected_recovery_cost',
-        'default_cod_margin_percentage',
         'notes',
     ];
 
