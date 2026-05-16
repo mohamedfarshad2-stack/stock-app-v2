@@ -88,8 +88,8 @@ class HELOSDashboard extends Page
                 ->get()
             : collect();
 
-        $hasReturnLossEstimate = $hasProducts &&
-            Schema::hasColumn('products', 'return_loss_estimate');
+        $hasReturnLossEstimate = $hasProducts
+            && Schema::hasColumn('products', 'return_loss_estimate');
 
         $highRiskProducts = $hasProducts
             ? Product::query()
@@ -106,8 +106,8 @@ class HELOSDashboard extends Page
                 ->get()
             : collect();
 
-        $businessUnitSummary = $hasDailyOps &&
-            Schema::hasTable('business_units')
+        $businessUnitSummary = $hasDailyOps
+            && Schema::hasTable('business_units')
             ? DailyCODOperation::query()
                 ->select(
                     'business_units.name',
