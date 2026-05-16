@@ -6,10 +6,14 @@ use App\Models\DailyCODOperation;
 use App\Models\MoneyRecord;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
- codex/stabilize-helos-system-implementation-5zq91q
+stabilize-helos-system-implementation-2b7ny6
 use Illuminate\Support\Facades\Schema;
 
- main
+ stabilize-helos-system-implementation-5zq91q
+use Illuminate\Support\Facades\Schema;
+
+ 
+
 use Filament\Pages\Page;
 
 class HELOSDashboard extends Page
@@ -28,10 +32,18 @@ class HELOSDashboard extends Page
         $hasDailyOps = Schema::hasTable('daily_cod_operations');
         $hasProducts = Schema::hasTable('products');
         $hasMoneyRecords = Schema::hasTable('money_records');
+stabilize-helos-system-implementation-2b7ny6
 
         $revenue = $hasMoneyRecords
             ? (float) MoneyRecord::where('type', 'income')->whereBetween('record_date', [$start, $end])->sum('amount')
             : 0.0;
+
+
+
+        $revenue = $hasMoneyRecords
+            ? (float) MoneyRecord::where('type', 'income')->whereBetween('record_date', [$start, $end])->sum('amount')
+            : 0.0;
+
 
         $expenses = $hasMoneyRecords
             ? (float) MoneyRecord::where('type', 'expense')->whereBetween('record_date', [$start, $end])->sum('amount')
@@ -89,6 +101,8 @@ class HELOSDashboard extends Page
             ->orderByDesc('expected_profit')
             ->limit(10)
             ->get() : collect();
+stabilize-helos-system-implementation-2b7ny6
+
 
         $expectedToday = (float) DailyCODOperation::query()
             ->whereDate('operation_date', $today)
@@ -129,6 +143,7 @@ class HELOSDashboard extends Page
             ->orderByDesc('expected_profit')
             ->limit(10)
             ->get();
+
 
         return [
             'kpis' => [

@@ -8,7 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+stabilize-helos-system-implementation-2b7ny6
+
 stabilize-helos-system-implementation-5zq91q
+
         if (Schema::hasTable('products')) {
             Schema::table('products', function (Blueprint $table) {
                 if (! Schema::hasColumn('products', 'packaging_cost')) {
@@ -46,6 +49,8 @@ stabilize-helos-system-implementation-5zq91q
                 // index is optional for stabilization; avoid duplicate-index failures in mixed environments
             });
         }
+stabilize-helos-system-implementation-2b7ny6
+
 
         Schema::table('products', function (Blueprint $table) {
             $table->decimal('packaging_cost', 12, 2)->default(0)->after('expected_courier_cost');
@@ -60,12 +65,15 @@ stabilize-helos-system-implementation-5zq91q
             $table->decimal('actual_profit', 12, 2)->nullable()->after('status');
             $table->index(['operation_date', 'status']);
         });
- main
+ 
     }
 
     public function down(): void
     {
+stabilize-helos-system-implementation-2b7ny6
+
 stabilize-helos-system-implementation-5zq91q
+
         if (Schema::hasTable('daily_cod_operations')) {
             Schema::table('daily_cod_operations', function (Blueprint $table) {
                 $columns = array_filter([
@@ -94,6 +102,8 @@ stabilize-helos-system-implementation-5zq91q
                 }
             });
         }
+stabilize-helos-system-implementation-2b7ny6
+
 
         Schema::table('daily_cod_operations', function (Blueprint $table) {
             $table->dropIndex(['operation_date', 'status']);
@@ -103,6 +113,6 @@ stabilize-helos-system-implementation-5zq91q
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn(['packaging_cost', 'advertisement_allocation', 'operational_overhead', 'return_loss_estimate']);
         });
- main
+
     }
 };

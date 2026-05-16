@@ -7,7 +7,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListBusinessUnits extends ListRecords
 {
-    protected static string  = BusinessUnitResource::class;
+    protected static string $resource = BusinessUnitResource::class;
 
     protected function getActions(): array
     {
