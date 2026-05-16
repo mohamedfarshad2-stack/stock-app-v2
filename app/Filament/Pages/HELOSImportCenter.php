@@ -24,6 +24,7 @@ class HELOSImportCenter extends Page implements HasForms
     protected static ?string $navigationIcon = 'heroicon-o-upload';
     protected static ?string $navigationGroup = 'HELOS';
     protected static ?string $navigationLabel = 'Import Center';
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?int $navigationSort = 50;
     protected static ?string $slug = 'helos-import-center';
     protected static string $view = 'filament.pages.helos-import-center';
@@ -62,9 +63,9 @@ class HELOSImportCenter extends Page implements HasForms
                 ->icon('heroicon-o-download')
                 ->action(fn () => Excel::download(new HELOSMoneyRecordTemplateExport(), 'helos-money-record-template.xlsx')),
             Action::make('downloadCategoryTemplate')
-                ->label('Download Finance Category Sample')
+                ->label('Download Cost Category Sample')
                 ->icon('heroicon-o-download')
-                ->action(fn () => Excel::download(new HELOSFinanceCategoryTemplateExport(), 'helos-finance-category-template.xlsx')),
+                ->action(fn () => Excel::download(new HELOSFinanceCategoryTemplateExport(), 'helos-cost-category-template.xlsx')),
         ];
     }
 

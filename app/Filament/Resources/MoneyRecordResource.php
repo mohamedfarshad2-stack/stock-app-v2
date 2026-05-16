@@ -26,8 +26,12 @@ class MoneyRecordResource extends Resource
             Forms\Components\Select::make('finance_category_id')->options(FinanceCategory::query()->pluck('name', 'id'))->searchable()->required(),
             Forms\Components\DatePicker::make('record_date')->default(now())->required(),
             Forms\Components\Select::make('type')->options([
-                'income' => 'Income','expense' => 'Expense','transfer' => 'Transfer','receivable' => 'Receivable','payable' => 'Payable',
-            ])->required(),
+                'expense' => 'Operational Cost',
+                'income' => 'Revenue',
+                'transfer' => 'Transfer',
+                'receivable' => 'Receivable',
+                'payable' => 'Payable',
+            ])->default('expense')->required(),
             Forms\Components\TextInput::make('amount')->numeric()->required(),
             Forms\Components\TextInput::make('payment_method'),
             Forms\Components\TextInput::make('reference_no'),
@@ -54,7 +58,11 @@ class MoneyRecordResource extends Resource
             Tables\Filters\SelectFilter::make('business_unit_id')->label('Business Unit')->relationship('businessUnit', 'name'),
             Tables\Filters\SelectFilter::make('finance_category_id')->label('Category')->relationship('financeCategory', 'name'),
             Tables\Filters\SelectFilter::make('type')->options([
-                'income' => 'Income','expense' => 'Expense','transfer' => 'Transfer','receivable' => 'Receivable','payable' => 'Payable',
+                'expense' => 'Operational Cost',
+                'income' => 'Revenue',
+                'transfer' => 'Transfer',
+                'receivable' => 'Receivable',
+                'payable' => 'Payable',
             ]),
             Tables\Filters\SelectFilter::make('status')->options([
                 'draft' => 'Draft','approved' => 'Approved','rejected' => 'Rejected',
