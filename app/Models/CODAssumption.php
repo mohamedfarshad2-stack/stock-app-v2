@@ -10,6 +10,8 @@ class CODAssumption extends Model
 {
     use HasFactory;
 
+    protected $table = 'cod_assumptions';
+
     protected $fillable = [
         'business_unit_id',
         'expected_return_percentage',

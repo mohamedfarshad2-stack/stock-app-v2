@@ -9,7 +9,7 @@ class Product extends Model
 {
     protected $fillable = [
         'gender','item_code','title','cost','image_path','is_cut',
-        'business_unit_id','sku','name','selling_price','product_cost','expected_courier_cost','weight','is_active','notes',
+        'business_unit_id','sku','name','selling_price','product_cost','expected_courier_cost','packaging_cost','advertisement_allocation','operational_overhead','return_loss_estimate','weight','is_active','notes',
     ];
 
     protected $casts = [
@@ -18,6 +18,10 @@ class Product extends Model
         'selling_price' => 'decimal:2',
         'product_cost' => 'decimal:2',
         'expected_courier_cost' => 'decimal:2',
+        'packaging_cost' => 'decimal:2',
+        'advertisement_allocation' => 'decimal:2',
+        'operational_overhead' => 'decimal:2',
+        'return_loss_estimate' => 'decimal:2',
         'weight' => 'decimal:2',
         'is_active' => 'boolean',
     ];
@@ -35,6 +39,17 @@ class Product extends Model
     public function strap()
     {
         return $this->hasOne(Strap::class, 'item_code', 'item_code');
+    }
+
+    public function expectedParcelProfitability(): float
+    {
+        return round((float) $this->selling_price
+            - (float) $this->product_cost
+            - (float) ($this->expected_courier_cost ?? 0)
+            - (float) ($this->packaging_cost ?? 0)
+            - (float) ($this->advertisement_allocation ?? 0)
+            - (float) ($this->operational_overhead ?? 0)
+            - (float) ($this->return_loss_estimate ?? 0), 2);
     }
 
     public function businessUnit(): BelongsTo
