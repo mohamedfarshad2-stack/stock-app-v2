@@ -26,6 +26,8 @@ class CODAssumptionResource extends Resource
             Forms\Components\TextInput::make('expected_recovery_percentage')->numeric()->required(),
             Forms\Components\TextInput::make('expected_recovery_cost')->numeric()->required(),
             Forms\Components\TextInput::make('default_cod_margin_percentage')->numeric(),
+            Forms\Components\Placeholder::make('analytics_scope')
+                ->content('This module is for forecasting assumptions only. Operational order entry happens in Daily COD Operations.'),
             Forms\Components\Textarea::make('notes'),
         ]);
     }
@@ -39,6 +41,9 @@ class CODAssumptionResource extends Resource
             Tables\Columns\TextColumn::make('expected_recovery_percentage')->suffix('%'),
             Tables\Columns\TextColumn::make('expected_recovery_cost')->money('LKR'),
             Tables\Columns\TextColumn::make('default_cod_margin_percentage')->suffix('%'),
+            Tables\Columns\TextColumn::make('expected_success_percentage')
+                ->label('Expected Success %')
+                ->getStateUsing(fn (CODAssumption $record) => round(100 - (float) $record->expected_return_percentage, 2).'%'),
         ])->actions([
             Tables\Actions\EditAction::make(),
         ])->bulkActions([
