@@ -7,5 +7,5 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateMoneyRecord extends CreateRecord
 {
-    protected static string  = MoneyRecordResource::class;
+    protected static string $resource = MoneyRecordResource::class;
 }
