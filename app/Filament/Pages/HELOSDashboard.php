@@ -22,11 +22,15 @@ class HELOSDashboard extends Page
     public function getViewData(): array
     {
         $today = now()->toDateString();
+
         $start = now()->startOfMonth()->toDateString();
+
         $end = now()->endOfMonth()->toDateString();
 
         $hasDailyOps = Schema::hasTable('daily_cod_operations');
+
         $hasProducts = Schema::hasTable('products');
+
         $hasMoneyRecords = Schema::hasTable('money_records');
 
         $revenue = $hasMoneyRecords
@@ -80,8 +84,16 @@ class HELOSDashboard extends Page
                     'products.name',
                     DB::raw('SUM(daily_cod_operations.expected_profit) as expected_profit')
                 )
-                ->join('products', 'products.id', '=', 'daily_cod_operations.product_id')
-                ->whereBetween('daily_cod_operations.operation_date', [$start, $end])
+                ->join(
+                    'products',
+                    'products.id',
+                    '=',
+                    'daily_cod_operations.product_id'
+                )
+                ->whereBetween(
+                    'daily_cod_operations.operation_date',
+                    [$start, $end]
+                )
                 ->groupBy('products.name')
                 ->orderByDesc('expected_profit')
                 ->limit(5)
@@ -111,7 +123,9 @@ class HELOSDashboard extends Page
             ? DailyCODOperation::query()
                 ->select(
                     'business_units.name',
-                    DB::raw('SUM(daily_cod_operations.expected_profit) as expected_profit')
+                    DB::raw(
+                        'SUM(daily_cod_operations.expected_profit) as expected_profit'
+                    )
                 )
                 ->join(
                     'business_units',
@@ -119,7 +133,10 @@ class HELOSDashboard extends Page
                     '=',
                     'daily_cod_operations.business_unit_id'
                 )
-                ->whereBetween('daily_cod_operations.operation_date', [$start, $end])
+                ->whereBetween(
+                    'daily_cod_operations.operation_date',
+                    [$start, $end]
+                )
                 ->groupBy('business_units.name')
                 ->orderByDesc('expected_profit')
                 ->limit(10)
