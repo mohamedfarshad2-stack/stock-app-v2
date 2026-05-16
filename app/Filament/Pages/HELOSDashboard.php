@@ -2,19 +2,53 @@
 
 namespace App\Filament\Pages;
 
+codex/create-helos-finance-module-foundation-98xta3
+use App\Models\MoneyRecord;
+use Filament\Pages\Page;
 use App\Models\DailyCODOperation;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
+ main
 
 class HELOSDashboard extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+ codex/create-helos-finance-module-foundation-98xta3
+
+    protected static ?string $navigationGroup = 'HELOS';
+
+    protected static ?string $navigationLabel = 'HELOS Dashboard';
+
+
     protected static ?string $navigationGroup = 'HELOS';
     protected static ?string $navigationLabel = 'HELOS Dashboard';
+ main
     protected static string $view = 'filament.pages.helos-dashboard';
 
     public function getViewData(): array
     {
+ codex/create-helos-finance-module-foundation-98xta3
+        $start = now()->startOfMonth()->toDateString();
+        $end = now()->endOfMonth()->toDateString();
+
+        $revenue = MoneyRecord::where('type', 'income')->whereBetween('record_date', [$start, $end])->sum('amount');
+        $expenses = MoneyRecord::where('type', 'expense')->whereBetween('record_date', [$start, $end])->sum('amount');
+        $netProfit = $revenue - $expenses;
+
+        $activeTeams = MoneyRecord::query()
+            ->whereBetween('record_date', [$start, $end])
+            ->distinct('business_unit_id')
+            ->count('business_unit_id');
+
+        return [
+            'kpis' => [
+                ['label' => 'Revenue', 'value' => 'Rs. ' . number_format($revenue, 2)],
+                ['label' => 'Expenses', 'value' => 'Rs. ' . number_format($expenses, 2)],
+                ['label' => 'Net Profit', 'value' => 'Rs. ' . number_format($netProfit, 2)],
+                ['label' => 'Active Teams', 'value' => (string) $activeTeams],
+            ],
+        ];
+
         $today = now()->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
 
@@ -47,5 +81,6 @@ class HELOSDashboard extends Page
             ->get();
 
         return compact('expectedToday', 'expectedMonth', 'revenueToday', 'revenueMonth', 'topProducts', 'highRiskProducts', 'businessUnitSummary');
+ main
     }
 }
