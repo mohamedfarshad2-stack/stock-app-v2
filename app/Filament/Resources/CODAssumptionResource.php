@@ -14,7 +14,7 @@ class CODAssumptionResource extends Resource
 {
     protected static ?string $model = CODAssumption::class;
     protected static ?string $navigationGroup = 'HELOS';
-    protected static ?string $navigationLabel = 'COD Assumptions';
+    protected static ?string $navigationLabel = 'COD Forecast Assumptions';
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
 
     public static function form(Form $form): Form

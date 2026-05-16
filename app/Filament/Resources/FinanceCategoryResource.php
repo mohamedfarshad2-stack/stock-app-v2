@@ -15,7 +15,7 @@ class FinanceCategoryResource extends Resource
     protected static ?string $model = FinanceCategory::class;
     protected static ?string $navigationIcon = 'heroicon-o-tag';
     protected static ?string $navigationGroup = 'HELOS';
-    protected static ?string $navigationLabel = 'Finance Categories';
+    protected static ?string $navigationLabel = 'Cost Categories';
 
     public static function form(Form $form): Form
     {
@@ -23,7 +23,11 @@ class FinanceCategoryResource extends Resource
             Forms\Components\TextInput::make('name')->required(),
             Forms\Components\TextInput::make('code'),
             Forms\Components\Select::make('type')->options([
-                'income' => 'Income','expense' => 'Expense','transfer' => 'Transfer','receivable' => 'Receivable','payable' => 'Payable',
+                'expense' => 'Operational Cost',
+                'income' => 'Revenue',
+                'transfer' => 'Transfer',
+                'receivable' => 'Receivable',
+                'payable' => 'Payable',
             ])->required(),
             Forms\Components\Select::make('parent_id')->label('Parent Category')->options(FinanceCategory::query()->pluck('name', 'id'))->searchable(),
             Forms\Components\Toggle::make('is_active')->default(true),
@@ -40,7 +44,11 @@ class FinanceCategoryResource extends Resource
             Tables\Columns\IconColumn::make('is_active')->boolean(),
         ])->filters([
             Tables\Filters\SelectFilter::make('type')->options([
-                'income' => 'Income','expense' => 'Expense','transfer' => 'Transfer','receivable' => 'Receivable','payable' => 'Payable',
+                'expense' => 'Operational Cost',
+                'income' => 'Revenue',
+                'transfer' => 'Transfer',
+                'receivable' => 'Receivable',
+                'payable' => 'Payable',
             ]),
             Tables\Filters\TernaryFilter::make('is_active'),
         ])->actions([
