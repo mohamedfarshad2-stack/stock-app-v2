@@ -6,7 +6,14 @@ use App\Models\DailyCODOperation;
 use App\Models\MoneyRecord;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
+stabilize-helos-system-implementation-2b7ny6
 use Illuminate\Support\Facades\Schema;
+
+ stabilize-helos-system-implementation-5zq91q
+use Illuminate\Support\Facades\Schema;
+
+ 
+
 use Filament\Pages\Page;
 
 class HELOSDashboard extends Page
@@ -25,10 +32,18 @@ class HELOSDashboard extends Page
         $hasDailyOps = Schema::hasTable('daily_cod_operations');
         $hasProducts = Schema::hasTable('products');
         $hasMoneyRecords = Schema::hasTable('money_records');
+stabilize-helos-system-implementation-2b7ny6
 
         $revenue = $hasMoneyRecords
             ? (float) MoneyRecord::where('type', 'income')->whereBetween('record_date', [$start, $end])->sum('amount')
             : 0.0;
+
+
+
+        $revenue = $hasMoneyRecords
+            ? (float) MoneyRecord::where('type', 'income')->whereBetween('record_date', [$start, $end])->sum('amount')
+            : 0.0;
+
 
         $expenses = $hasMoneyRecords
             ? (float) MoneyRecord::where('type', 'expense')->whereBetween('record_date', [$start, $end])->sum('amount')
@@ -86,6 +101,49 @@ class HELOSDashboard extends Page
             ->orderByDesc('expected_profit')
             ->limit(10)
             ->get() : collect();
+stabilize-helos-system-implementation-2b7ny6
+
+
+        $expectedToday = (float) DailyCODOperation::query()
+            ->whereDate('operation_date', $today)
+            ->sum('expected_profit');
+
+        $expectedMonth = (float) DailyCODOperation::query()
+            ->whereBetween('operation_date', [$start, $end])
+            ->sum('expected_profit');
+
+        $revenueToday = (float) DailyCODOperation::query()
+            ->whereDate('operation_date', $today)
+            ->sum(DB::raw('quantity * selling_price'));
+
+        $revenueMonth = (float) DailyCODOperation::query()
+            ->whereBetween('operation_date', [$start, $end])
+            ->sum(DB::raw('quantity * selling_price'));
+
+        $topProducts = DailyCODOperation::query()
+            ->select('products.name', DB::raw('SUM(daily_cod_operations.expected_profit) as expected_profit'))
+            ->join('products', 'products.id', '=', 'daily_cod_operations.product_id')
+            ->whereBetween('daily_cod_operations.operation_date', [$start, $end])
+            ->groupBy('products.name')
+            ->orderByDesc('expected_profit')
+            ->limit(5)
+            ->get();
+
+        $highRiskProducts = Product::query()
+            ->select(['name', DB::raw("CASE WHEN expected_courier_cost > 0 THEN (return_loss_estimate / expected_courier_cost) * 100 ELSE 0 END as return_risk")])
+            ->orderByDesc('return_risk')
+            ->limit(5)
+            ->get();
+
+        $businessUnitSummary = DailyCODOperation::query()
+            ->select('business_units.name', DB::raw('SUM(daily_cod_operations.expected_profit) as expected_profit'))
+            ->join('business_units', 'business_units.id', '=', 'daily_cod_operations.business_unit_id')
+            ->whereBetween('daily_cod_operations.operation_date', [$start, $end])
+            ->groupBy('business_units.name')
+            ->orderByDesc('expected_profit')
+            ->limit(10)
+            ->get();
+
 
         return [
             'kpis' => [
