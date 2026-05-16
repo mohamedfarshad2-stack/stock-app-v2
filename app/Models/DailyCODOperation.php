@@ -10,6 +10,8 @@ class DailyCODOperation extends Model
 {
     use HasFactory;
 
+    protected $table = 'daily_cod_operations';
+
     protected $fillable = [
         'operation_date','order_code','business_unit_id','product_id','quantity','selling_price','product_cost','courier_cost',
         'expected_return_percentage','expected_profit','status','actual_profit','delivered_quantity','returned_quantity','notes',
