@@ -4,6 +4,8 @@ namespace App\Filament\Resources\MoneyRecordResource\Pages;
 
 use App\Filament\Pages\HELOSImportCenter;
 use App\Filament\Resources\MoneyRecordResource;
+use Filament\Pages\Actions\Action;
+use Filament\Pages\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListMoneyRecords extends ListRecords
@@ -13,8 +15,12 @@ class ListMoneyRecords extends ListRecords
     protected function getActions(): array
     {
         return [
-            \Filament\Pages\Actions\Action::make('import_excel')->label('Import Excel')->icon('heroicon-o-upload')->url(HELOSImportCenter::getUrl()),
-            \Filament\Pages\Actions\CreateAction::make(),
+            Action::make('import_excel')
+                ->label('Import Excel')
+                ->icon('heroicon-o-upload')
+                ->url(HELOSImportCenter::getUrl()),
+
+            CreateAction::make(),
         ];
     }
 }
