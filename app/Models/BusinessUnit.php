@@ -26,4 +26,22 @@ class BusinessUnit extends Model
     {
         return $this->hasMany(MoneyRecord::class);
     }
+ codex/create-helos-finance-module-foundation-98xta3
+
+
+    public function codAssumptions(): HasMany
+    {
+        return $this->hasMany(CODAssumption::class);
+    }
+
+    public function dailyCodOperations(): HasMany
+    {
+        return $this->hasMany(DailyCODOperation::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+ main
 }

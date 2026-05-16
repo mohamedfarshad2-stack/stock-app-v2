@@ -2,7 +2,10 @@
 
 namespace App\Filament\Pages;
 
+ codex/create-helos-finance-module-foundation-98xta3
 use App\Exports\HELOSFinanceCategoryTemplateExport;
+
+ main
 use App\Exports\HELOSMoneyRecordTemplateExport;
 use App\Models\BusinessUnit;
 use App\Models\FinanceCategory;
@@ -14,7 +17,10 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Actions\Action;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+ codex/create-helos-finance-module-foundation-98xta3
 use Illuminate\Support\Facades\Storage;
+
+ main
 use Maatwebsite\Excel\Facades\Excel;
 
 class HELOSImportCenter extends Page implements HasForms
@@ -30,13 +36,15 @@ class HELOSImportCenter extends Page implements HasForms
 
     public $file;
 
+ codex/create-helos-finance-module-foundation-98xta3
     public $category_file;
-
+ main
     protected function getFormSchema(): array
     {
         return [
             Forms\Components\FileUpload::make('file')
                 ->label('Upload Excel File')
+ codex/create-helos-finance-module-foundation-98xta3
                 ->disk('public')
                 ->directory('helos-imports')
                 ->acceptedFileTypes([
@@ -53,37 +61,55 @@ class HELOSImportCenter extends Page implements HasForms
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     'application/vnd.ms-excel',
                 ]),
+
+                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'])
+                ->required(),
+ main
         ];
     }
 
     protected function getHeaderActions(): array
     {
         return [
+ codex/create-helos-finance-module-foundation-98xta3
             Action::make('downloadMoneyTemplate')
                 ->label('Download Money Records Sample')
+
+            Action::make('downloadTemplate')
+                ->label('Download Sample Excel')
+ main
                 ->icon('heroicon-o-download')
                 ->action(function () {
                     return Excel::download(new HELOSMoneyRecordTemplateExport(), 'helos-money-record-template.xlsx');
                 }),
+ codex/create-helos-finance-module-foundation-98xta3
             Action::make('downloadCategoryTemplate')
                 ->label('Download Finance Category Sample')
                 ->icon('heroicon-o-download')
                 ->action(function () {
                     return Excel::download(new HELOSFinanceCategoryTemplateExport(), 'helos-finance-category-template.xlsx');
                 }),
+
+ main
         ];
     }
 
     public function import(): void
     {
         $data = $this->form->getState();
+ codex/create-helos-finance-module-foundation-98xta3
         $fileState = $data['file'] ?? null;
 
         if (empty($fileState)) {
+
+
+        if (empty($data['file'])) {
+ main
             Notification::make()->title('Please upload a file first.')->danger()->send();
             return;
         }
 
+ codex/create-helos-finance-module-foundation-98xta3
         $storedPath = is_array($fileState) ? (array_values($fileState)[0] ?? null) : $fileState;
 
         if (! $storedPath || ! Storage::disk('public')->exists($storedPath)) {
@@ -93,6 +119,9 @@ class HELOSImportCenter extends Page implements HasForms
 
         $fullPath = Storage::disk('public')->path($storedPath);
         $rows = Excel::toArray([], $fullPath)[0] ?? [];
+
+        $rows = Excel::toArray([], storage_path('app/public/' . $data['file']))[0] ?? [];
+ main
 
         if (count($rows) <= 1) {
             Notification::make()->title('Excel file has no data rows.')->danger()->send();
@@ -104,11 +133,14 @@ class HELOSImportCenter extends Page implements HasForms
 
         foreach (array_slice($rows, 1) as $index => $row) {
             $line = $index + 2;
+ codex/create-helos-finance-module-foundation-98xta3
 
             if (count(array_filter($row, fn ($v) => trim((string) $v) !== '')) === 0) {
                 continue;
             }
 
+
+ main
             $businessUnit = BusinessUnit::where('name', trim((string) ($row[1] ?? '')))->first();
             $category = FinanceCategory::where('name', trim((string) ($row[2] ?? '')))->first();
 
@@ -123,6 +155,7 @@ class HELOSImportCenter extends Page implements HasForms
             }
 
             $type = strtolower(trim((string) ($row[3] ?? '')));
+ codex/create-helos-finance-module-foundation-98xta3
             if (! in_array($type, ['income', 'expense', 'transfer', 'receivable', 'payable'], true)) {
                 $errors[] = "Row {$line}: Type must be income/expense/transfer/receivable/payable.";
                 continue;
@@ -131,16 +164,28 @@ class HELOSImportCenter extends Page implements HasForms
             $amount = (float) ($row[7] ?? 0);
             if ($amount <= 0) {
                 $errors[] = "Row {$line}: Amount must be greater than 0.";
+
+            if (! in_array($type, ['income', 'expense'], true)) {
+                $errors[] = "Row {$line}: Type must be income or expense.";
+ main
                 continue;
             }
 
             MoneyRecord::create([
+ codex/create-helos-finance-module-foundation-98xta3
                 'record_date' => $row[0] ?: now()->toDateString(),
+
+                'record_date' => $row[0] ?? now()->toDateString(),
+ main
                 'business_unit_id' => $businessUnit->id,
                 'finance_category_id' => $category->id,
                 'user_id' => Auth::id(),
                 'type' => $type,
+ codex/create-helos-finance-module-foundation-98xta3
                 'amount' => $amount,
+
+                'amount' => (float) ($row[7] ?? 0),
+ main
                 'payment_method' => $row[5] ?? null,
                 'reference_no' => $row[10] ?? null,
                 'description' => $row[11] ?? null,
@@ -150,6 +195,7 @@ class HELOSImportCenter extends Page implements HasForms
             $imported++;
         }
 
+ codex/create-helos-finance-module-foundation-98xta3
         $summary = "Imported {$imported} rows.";
 
         if (! empty($errors)) {
@@ -245,4 +291,16 @@ class HELOSImportCenter extends Page implements HasForms
         $this->form->fill(['category_file' => null]);
     }
 
+
+        $message = "Imported {$imported} rows.";
+        if (! empty($errors)) {
+            $message .= ' Errors: ' . implode(' ', array_slice($errors, 0, 5));
+            Notification::make()->title($message)->warning()->send();
+            return;
+        }
+
+        Notification::make()->title($message)->success()->send();
+        $this->form->fill();
+    }
+ main
 }
