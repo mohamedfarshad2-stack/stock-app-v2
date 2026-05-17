@@ -483,16 +483,19 @@ class HELOSImportCenter extends Page implements HasForms
             $rawStatus = (string) $this->getMappedValue(
                 $row,
                 $headerMap,
-                ['operational status', 'status', 'delivery state'],
+                ['operational status', 'status', 'delivery state', 'csr status'],
                 8
             );
+
+            $confirmationStatus = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['confirmation state', 'verification status', 'confirmation'],
+                13
+            ));
+
             if (trim($rawStatus) === '') {
-                $rawStatus = (string) $this->getMappedValue(
-                    $row,
-                    $headerMap,
-                    ['csr status', 'confirmation', 'delivery'],
-                    8
-                );
+                $rawStatus = 'pending';
             }
 
             $normalizedStatus = $this->normalizeOperationalStatusValue(
@@ -530,9 +533,7 @@ class HELOSImportCenter extends Page implements HasForms
             }
 
             if ($normalizedStatus === null) {
-                $errors[] = "Row {$line}: Unknown operational status '{$rawStatus}'.";
-                $failed++;
-                continue;
+                $normalizedStatus = 'pending';
             }
 
             $orderDate = $this->parseDateOrNull($orderDateRaw);
@@ -642,14 +643,9 @@ class HELOSImportCenter extends Page implements HasForms
                     )
                 ) ?: null,
 
-                'verification_status' => trim(
-                    (string) $this->getMappedValue(
-                        $row,
-                        $headerMap,
-                        ['confirmation state', 'verification status'],
-                        13
-                    )
-                ) ?: 'pending',
+                'verification_status' => $confirmationStatus !== ''
+                    ? $confirmationStatus
+                    : 'pending',
 
                 'delivery_status' => $normalizedStatus,
 
