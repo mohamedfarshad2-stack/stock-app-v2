@@ -7,5 +7,5 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateBusinessUnit extends CreateRecord
 {
-    protected static string  = BusinessUnitResource::class;
+    protected static string $resource = BusinessUnitResource::class;
 }
