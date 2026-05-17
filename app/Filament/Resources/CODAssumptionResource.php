@@ -7,4 +7,9 @@ namespace App\Filament\Resources;
  */
 class CODAssumptionResource extends CODPerformanceAssumptionResource
 {
+    /**
+     * Keep legacy class for backward compatibility only.
+     * Prevent duplicate sidebar item / active-state conflicts.
+     */
+    protected static bool $shouldRegisterNavigation = false;
 }

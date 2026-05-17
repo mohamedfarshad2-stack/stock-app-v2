@@ -164,11 +164,17 @@ class HELOSDashboard extends Page
             ],
 
             'expectedToday' => $expectedToday,
+
             'expectedMonth' => $expectedMonth,
+
             'revenueToday' => $revenueToday,
+
             'revenueMonth' => $revenueMonth,
+
             'topProducts' => $topProducts,
+
             'highRiskProducts' => $highRiskProducts,
+
             'businessUnitSummary' => $businessUnitSummary,
         ];
     }
