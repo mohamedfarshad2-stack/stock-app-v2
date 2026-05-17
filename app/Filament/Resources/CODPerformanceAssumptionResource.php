@@ -21,7 +21,7 @@ class CODPerformanceAssumptionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         // Keep visible when COD/hybrid BU exists,
         // or when existing assumption records are present.
@@ -84,6 +84,7 @@ class CODPerformanceAssumptionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
+
             Tables\Columns\TextColumn::make('businessUnit.name')
                 ->label('Business Unit')
                 ->sortable()
@@ -104,7 +105,9 @@ class CODPerformanceAssumptionResource extends Resource
             Tables\Columns\TextColumn::make('created_at')
                 ->dateTime()
                 ->sortable(),
+
         ])->filters([
+
             Tables\Filters\SelectFilter::make('business_unit_id')
                 ->label('Business Unit')
                 ->options(
@@ -115,6 +118,7 @@ class CODPerformanceAssumptionResource extends Resource
                         : BusinessUnit::query()
                             ->pluck('name', 'id')
                 ),
+
         ])->actions([
             Tables\Actions\EditAction::make(),
         ])->bulkActions([

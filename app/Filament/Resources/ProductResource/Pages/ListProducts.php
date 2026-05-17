@@ -43,9 +43,14 @@ class ListProducts extends ListRecords
                         ]),
                 ])
                 ->action(function (array $data): void {
+
                     $storedPath = $data['file'] ?? null;
 
-                    if (! $storedPath || ! Storage::disk('public')->exists($storedPath)) {
+                    if (
+                        ! $storedPath ||
+                        ! Storage::disk('public')->exists($storedPath)
+                    ) {
+
                         Notification::make()
                             ->title('Uploaded file not found.')
                             ->danger()
@@ -60,6 +65,7 @@ class ListProducts extends ListRecords
                     )[0] ?? [];
 
                     if (count($rows) <= 1) {
+
                         Notification::make()
                             ->title('Excel has no data rows.')
                             ->danger()
@@ -79,6 +85,7 @@ class ListProducts extends ListRecords
                     $errors = [];
 
                     foreach (array_slice($rows, 1) as $i => $row) {
+
                         $line = $i + 2;
 
                         $sku = trim((string) ($row[1] ?? ''));
@@ -86,13 +93,16 @@ class ListProducts extends ListRecords
                         $name = trim((string) ($row[2] ?? ''));
 
                         if ($sku === '' || $name === '') {
+
                             $errors[] = "Row {$line}: SKU and Product Name are required.";
 
                             continue;
                         }
 
                         $buId = $buMap[
-                            mb_strtolower(trim((string) ($row[0] ?? '')))
+                            mb_strtolower(
+                                trim((string) ($row[0] ?? ''))
+                            )
                         ] ?? null;
 
                         $strap = (float) ($row[5] ?? 0);
@@ -132,7 +142,9 @@ class ListProducts extends ListRecords
                         $overhead = $stationery + $baseEmp;
 
                         Product::updateOrCreate(
-                            ['sku' => $sku],
+                            [
+                                'sku' => $sku,
+                            ],
                             [
                                 'business_unit_id' => $buId,
                                 'name' => $name,

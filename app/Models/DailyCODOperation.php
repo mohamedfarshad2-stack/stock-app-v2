@@ -43,6 +43,7 @@ class DailyCODOperation extends Model
     protected static function booted(): void
     {
         static::saving(function (self $model) {
+
             if (empty($model->status)) {
                 $model->status = 'queued';
             }
