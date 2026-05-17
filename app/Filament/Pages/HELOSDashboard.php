@@ -37,13 +37,13 @@ class HELOSDashboard extends Page
             ? (float) MoneyRecord::where('type', 'income')
                 ->whereBetween('record_date', [$start, $end])
                 ->sum('amount')
-            : 0;
+            : 0.0;
 
         $expenses = $hasMoneyRecords
             ? (float) MoneyRecord::where('type', 'expense')
                 ->whereBetween('record_date', [$start, $end])
                 ->sum('amount')
-            : 0;
+            : 0.0;
 
         $netProfit = $revenue - $expenses;
 
@@ -58,25 +58,25 @@ class HELOSDashboard extends Page
             ? (float) DailyCODOperation::query()
                 ->whereDate('operation_date', $today)
                 ->sum('expected_profit')
-            : 0;
+            : 0.0;
 
         $expectedMonth = $hasDailyOps
             ? (float) DailyCODOperation::query()
                 ->whereBetween('operation_date', [$start, $end])
                 ->sum('expected_profit')
-            : 0;
+            : 0.0;
 
         $revenueToday = $hasDailyOps
             ? (float) DailyCODOperation::query()
                 ->whereDate('operation_date', $today)
                 ->sum(DB::raw('quantity * selling_price'))
-            : 0;
+            : 0.0;
 
         $revenueMonth = $hasDailyOps
             ? (float) DailyCODOperation::query()
                 ->whereBetween('operation_date', [$start, $end])
                 ->sum(DB::raw('quantity * selling_price'))
-            : 0;
+            : 0.0;
 
         $topProducts = $hasDailyOps && $hasProducts
             ? DailyCODOperation::query()

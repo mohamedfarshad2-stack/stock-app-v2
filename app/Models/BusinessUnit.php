@@ -33,4 +33,21 @@ class BusinessUnit extends Model
         return $this->hasMany(MoneyRecord::class);
     }
 
-  
+    public function codPerformanceAssumptions(): HasMany
+    {
+        return $this->hasMany(CODPerformanceAssumption::class);
+    }
+
+    /**
+     * Backward compatibility alias.
+     */
+    public function codAssumptions(): HasMany
+    {
+        return $this->hasMany(CODPerformanceAssumption::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+}
