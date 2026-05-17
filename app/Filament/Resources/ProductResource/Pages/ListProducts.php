@@ -6,7 +6,7 @@ use App\Exports\HELOSSKUCostMasterTemplateExport;
 use App\Filament\Resources\ProductResource;
 use App\Models\BusinessUnit;
 use App\Models\Product;
-use Filament\Forms\Components\FileUpload;
+use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions\Action;
 use Filament\Pages\Actions\CreateAction;
@@ -33,10 +33,11 @@ class ListProducts extends ListRecords
                 ->label('Import SKU Cost Master')
                 ->icon('heroicon-o-upload')
                 ->form([
-                    FileUpload::make('file')
-                        ->required()
+                    Forms\Components\FileUpload::make('file')
+                        ->label('SKU Cost Master File')
                         ->disk('public')
                         ->directory('helos-imports')
+                        ->required()
                         ->acceptedFileTypes([
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                             'application/vnd.ms-excel',
@@ -44,7 +45,11 @@ class ListProducts extends ListRecords
                 ])
                 ->action(function (array $data): void {
 
-                    $storedPath = $data['file'] ?? null;
+                    $fileState = $data['file'] ?? null;
+
+                    $storedPath = is_array($fileState)
+                        ? (array_values($fileState)[0] ?? null)
+                        : $fileState;
 
                     if (
                         ! $storedPath ||
@@ -52,7 +57,7 @@ class ListProducts extends ListRecords
                     ) {
 
                         Notification::make()
-                            ->title('Uploaded file not found.')
+                            ->title('Uploaded file not found. Please upload again.')
                             ->danger()
                             ->send();
 
@@ -67,14 +72,14 @@ class ListProducts extends ListRecords
                     if (count($rows) <= 1) {
 
                         Notification::make()
-                            ->title('Excel has no data rows.')
-                            ->danger()
+                            ->title('SKU file has no data rows.')
+                            ->warning()
                             ->send();
 
                         return;
                     }
 
-                    $buMap = BusinessUnit::query()
+                    $businessUnitMap = BusinessUnit::query()
                         ->pluck('id', 'name')
                         ->mapWithKeys(fn ($id, $name) => [
                             mb_strtolower(trim((string) $name)) => $id,
@@ -84,9 +89,9 @@ class ListProducts extends ListRecords
 
                     $errors = [];
 
-                    foreach (array_slice($rows, 1) as $i => $row) {
+                    foreach (array_slice($rows, 1) as $index => $row) {
 
-                        $line = $i + 2;
+                        $line = $index + 2;
 
                         $sku = trim((string) ($row[1] ?? ''));
 
@@ -99,84 +104,115 @@ class ListProducts extends ListRecords
                             continue;
                         }
 
-                        $buId = $buMap[
-                            mb_strtolower(
-                                trim((string) ($row[0] ?? ''))
-                            )
-                        ] ?? null;
+                        $buName = mb_strtolower(
+                            trim((string) ($row[0] ?? ''))
+                        );
 
-                        $strap = (float) ($row[5] ?? 0);
+                        $buId = $businessUnitMap[$buName] ?? null;
 
-                        $stitch = (float) ($row[6] ?? 0);
+                        $strapMaker = (float) ($row[5] ?? 0);
 
-                        $stitchEmp = (float) ($row[7] ?? 0);
+                        $stitchingWorker = (float) ($row[6] ?? 0);
 
-                        $upper = (float) ($row[8] ?? 0);
+                        $finishingWorker = (float) ($row[7] ?? 0);
 
-                        $middle = (float) ($row[9] ?? 0);
+                        $strapCost = (float) ($row[8] ?? 0);
 
-                        $bottom = (float) ($row[10] ?? 0);
+                        $stitchingCost = (float) ($row[9] ?? 0);
 
-                        $glue = (float) ($row[11] ?? 0);
+                        $stitchingEmployee = (float) ($row[10] ?? 0);
 
-                        $stationery = (float) ($row[12] ?? 0);
+                        $upperLayer = (float) ($row[11] ?? 0);
 
-                        $baseEmp = (float) ($row[13] ?? 0);
+                        $middleLayer = (float) ($row[12] ?? 0);
 
-                        $packing = (float) ($row[14] ?? 0);
+                        $bottomLayer = (float) ($row[13] ?? 0);
 
-                        $courier = (float) ($row[15] ?? 0);
+                        $glueCost = (float) ($row[14] ?? 0);
 
-                        $adAlloc = (float) ($row[16] ?? 0);
+                        $stationery = (float) ($row[15] ?? 0);
 
-                        $returnLoss = (float) ($row[17] ?? 0);
+                        $baseEmployee = (float) ($row[16] ?? 0);
 
-                        $manufacturing = $strap
-                            + $stitch
-                            + $stitchEmp
-                            + $upper
-                            + $middle
-                            + $bottom
-                            + $glue;
+                        $packing = (float) ($row[17] ?? 0);
 
-                        $overhead = $stationery + $baseEmp;
+                        $courier = (float) ($row[18] ?? 0);
 
-                        Product::updateOrCreate(
+                        $adAlloc = (float) ($row[19] ?? 0);
+
+                        $returnLoss = (float) ($row[20] ?? 0);
+
+                        $manufacturing = $strapMaker
+                            + $stitchingWorker
+                            + $finishingWorker
+                            + $strapCost
+                            + $stitchingCost
+                            + $stitchingEmployee
+                            + $upperLayer
+                            + $middleLayer
+                            + $bottomLayer
+                            + $glueCost;
+
+                        $overhead = $stationery + $baseEmployee;
+
+                        $product = Product::updateOrCreate(
                             [
                                 'sku' => $sku,
                             ],
                             [
+                                'item_code' => $sku,
+                                'title' => $name,
+                                'cost' => $manufacturing,
+
                                 'business_unit_id' => $buId,
                                 'name' => $name,
+
                                 'selling_price' => (float) ($row[4] ?? 0),
+
                                 'product_cost' => $manufacturing,
+
                                 'expected_courier_cost' => $courier,
+
                                 'packaging_cost' => $packing,
+
                                 'advertisement_allocation' => $adAlloc,
+
                                 'operational_overhead' => $overhead,
+
                                 'return_loss_estimate' => $returnLoss,
-                                'weight' => (float) ($row[18] ?? 0),
+
+                                'weight' => (float) ($row[21] ?? 0),
+
                                 'is_active' => in_array(
-                                    strtolower((string) ($row[19] ?? '1')),
+                                    strtolower((string) ($row[22] ?? '1')),
                                     ['1', 'true', 'yes'],
                                     true
                                 ),
-                                'notes' => trim((string) ($row[20] ?? '')),
+
+                                'notes' => trim((string) ($row[23] ?? '')),
                             ]
                         );
+
+                        if (
+                            $product->item_code === null ||
+                            trim((string) $product->item_code) === ''
+                        ) {
+                            $product->item_code = $sku;
+                            $product->save();
+                        }
 
                         $imported++;
                     }
 
                     Notification::make()
-                        ->title("Imported {$imported} SKU rows")
+                        ->title("SKU import completed: {$imported} rows processed")
                         ->body(
                             $errors === []
-                                ? 'Completed successfully.'
-                                : implode("\n", array_slice($errors, 0, 10))
+                                ? 'All rows imported successfully.'
+                                : implode("\n", array_slice($errors, 0, 8))
                         )
                         ->success($errors === [])
-                        ->danger($errors !== [])
+                        ->warning($errors !== [])
                         ->send();
                 }),
 
