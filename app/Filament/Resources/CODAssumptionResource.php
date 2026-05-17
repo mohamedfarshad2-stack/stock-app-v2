@@ -12,4 +12,9 @@ class CODAssumptionResource extends CODPerformanceAssumptionResource
      * Prevent duplicate sidebar item / active-state conflicts.
      */
     protected static bool $shouldRegisterNavigation = false;
+
+    protected static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 }

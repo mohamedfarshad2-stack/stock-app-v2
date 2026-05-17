@@ -64,7 +64,8 @@ return new class extends Migration
                         ->after('status');
                 }
 
-                // index is optional for stabilization; avoid duplicate-index failures in mixed environments
+                // index is optional for stabilization;
+                // avoid duplicate-index failures in mixed environments
             });
         }
     }
