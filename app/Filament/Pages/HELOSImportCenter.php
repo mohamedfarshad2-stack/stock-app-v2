@@ -149,10 +149,10 @@ class HELOSImportCenter extends Page implements HasForms
         }
 
         $businessUnitMap = BusinessUnit::query()->pluck('id', 'name')
-            ->mapWithKeys(fn ($id, $name) => [mb_strtolower(trim((string) $name)) => $id]);
+            ->mapWithKeys(fn ($id, $name) => [$this->normalizeLookupKey((string) $name) => $id]);
 
         $categoryMap = FinanceCategory::query()->pluck('id', 'name')
-            ->mapWithKeys(fn ($id, $name) => [mb_strtolower(trim((string) $name)) => $id]);
+            ->mapWithKeys(fn ($id, $name) => [$this->normalizeLookupKey((string) $name) => $id]);
 
         $imported = 0;
         $errors = [];
@@ -166,8 +166,11 @@ class HELOSImportCenter extends Page implements HasForms
                 continue;
             }
 
-            $businessUnitId = $businessUnitMap[mb_strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['business unit', 'business_unit'], 1)))] ?? null;
-            $categoryId = $categoryMap[mb_strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['category', 'finance category', 'finance_category'], 2)))] ?? null;
+            $businessUnitRaw = (string) $this->getMappedValue($row, $headerMap, ['business unit', 'business_unit', 'business-unit'], 1);
+            $businessUnitId = $businessUnitMap[$this->normalizeLookupKey($businessUnitRaw)] ?? ($context['business_unit_id'] ?? null);
+
+            $categoryRaw = (string) $this->getMappedValue($row, $headerMap, ['category', 'finance category', 'finance_category', 'cost category'], 2);
+            $categoryId = $categoryMap[$this->normalizeLookupKey($categoryRaw)] ?? null;
 
             if (! $businessUnitId) {
                 $errors[] = "Row {$line}: Business Unit not found.";
@@ -444,6 +447,15 @@ class HELOSImportCenter extends Page implements HasForms
         }
 
         return null;
+    }
+
+
+    private function normalizeLookupKey(string $value): string
+    {
+        $key = mb_strtolower(trim($value));
+        $key = preg_replace('/[^\p{L}\p{N}]+/u', '', $key) ?? '';
+
+        return $key;
     }
 
     private function buildHeaderMap(array $headerRow): array
