@@ -23,9 +23,10 @@ class CODPerformanceAssumptionResource extends Resource
 
     protected static function shouldRegisterNavigation(): bool
     {
-        return BusinessUnit::query()
-            ->codCompatible()
-            ->exists();
+        // Keep visible when COD/hybrid BU exists,
+        // or when existing assumption records are present.
+        return BusinessUnit::query()->codCompatible()->exists()
+            || static::getModel()::query()->exists();
     }
 
     public static function form(Form $form): Form
@@ -39,9 +40,12 @@ class CODPerformanceAssumptionResource extends Resource
             Forms\Components\Select::make('business_unit_id')
                 ->label('Business Unit')
                 ->options(
-                    BusinessUnit::query()
-                        ->codCompatible()
-                        ->pluck('name', 'id')
+                    BusinessUnit::query()->codCompatible()->exists()
+                        ? BusinessUnit::query()
+                            ->codCompatible()
+                            ->pluck('name', 'id')
+                        : BusinessUnit::query()
+                            ->pluck('name', 'id')
                 )
                 ->searchable()
                 ->required(),
@@ -104,9 +108,12 @@ class CODPerformanceAssumptionResource extends Resource
             Tables\Filters\SelectFilter::make('business_unit_id')
                 ->label('Business Unit')
                 ->options(
-                    BusinessUnit::query()
-                        ->codCompatible()
-                        ->pluck('name', 'id')
+                    BusinessUnit::query()->codCompatible()->exists()
+                        ? BusinessUnit::query()
+                            ->codCompatible()
+                            ->pluck('name', 'id')
+                        : BusinessUnit::query()
+                            ->pluck('name', 'id')
                 ),
         ])->actions([
             Tables\Actions\EditAction::make(),
