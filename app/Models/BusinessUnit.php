@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BusinessUnit extends Model
@@ -22,16 +23,24 @@ class BusinessUnit extends Model
         'is_active' => 'boolean',
     ];
 
+    public function scopeCodCompatible(Builder $query): Builder
+    {
+        return $query->whereIn('type', ['cod', 'hybrid']);
+    }
+
     public function moneyRecords(): HasMany
     {
         return $this->hasMany(MoneyRecord::class);
     }
- codex/create-helos-finance-module-foundation-98xta3
 
+    public function codPerformanceAssumptions(): HasMany
+    {
+        return $this->hasMany(CODPerformanceAssumption::class);
+    }
 
     public function codAssumptions(): HasMany
     {
-        return $this->hasMany(CODAssumption::class);
+        return $this->hasMany(CODPerformanceAssumption::class);
     }
 
     public function dailyCodOperations(): HasMany
@@ -43,5 +52,4 @@ class BusinessUnit extends Model
     {
         return $this->hasMany(Product::class);
     }
- main
 }

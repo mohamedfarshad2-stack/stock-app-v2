@@ -24,11 +24,7 @@ class FinanceCategoryResource extends Resource
             Forms\Components\TextInput::make('code'),
             Forms\Components\Select::make('type')->options([
                 'expense' => 'Operational Cost',
-                'income' => 'Revenue',
-                'transfer' => 'Transfer',
-                'receivable' => 'Receivable',
-                'payable' => 'Payable',
-            ])->required(),
+            ])->default('expense')->required(),
             Forms\Components\Select::make('parent_id')->label('Parent Category')->options(FinanceCategory::query()->pluck('name', 'id'))->searchable(),
             Forms\Components\Toggle::make('is_active')->default(true),
         ]);
@@ -45,10 +41,6 @@ class FinanceCategoryResource extends Resource
         ])->filters([
             Tables\Filters\SelectFilter::make('type')->options([
                 'expense' => 'Operational Cost',
-                'income' => 'Revenue',
-                'transfer' => 'Transfer',
-                'receivable' => 'Receivable',
-                'payable' => 'Payable',
             ]),
             Tables\Filters\TernaryFilter::make('is_active'),
         ])->actions([
