@@ -13,7 +13,7 @@ class CODAssumptionResource extends CODPerformanceAssumptionResource
      */
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
         return false;
     }
