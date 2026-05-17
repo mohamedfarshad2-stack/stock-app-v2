@@ -26,12 +26,15 @@ class BusinessUnit extends Model
     {
         return $this->hasMany(MoneyRecord::class);
     }
- codex/create-helos-finance-module-foundation-98xta3
 
+    public function codPerformanceAssumptions(): HasMany
+    {
+        return $this->hasMany(CODPerformanceAssumption::class);
+    }
 
     public function codAssumptions(): HasMany
     {
-        return $this->hasMany(CODAssumption::class);
+        return $this->hasMany(CODPerformanceAssumption::class);
     }
 
     public function dailyCodOperations(): HasMany
@@ -43,5 +46,4 @@ class BusinessUnit extends Model
     {
         return $this->hasMany(Product::class);
     }
- main
 }
