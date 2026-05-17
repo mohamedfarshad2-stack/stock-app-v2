@@ -8,9 +8,12 @@ use App\Exports\HELOSOperationalIntakeTemplateExport;
 use App\Models\BusinessUnit;
 use App\Models\Channel;
 use App\Models\Customer;
+use App\Models\DailyCODOperation;
 use App\Models\FinanceCategory;
 use App\Models\MoneyRecord;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -409,11 +412,15 @@ class HELOSImportCenter extends Page implements HasForms
 
         $errors = [];
 
-        $channel = Channel::query()
+        $channelMap = Channel::query()
+            ->get()
+            ->keyBy(fn (Channel $channel) => mb_strtolower(trim((string) $channel->name)));
+
+        $defaultChannel = Channel::query()
             ->orderBy('id')
             ->first();
 
-        if (! $channel) {
+        if (! $defaultChannel) {
 
             Notification::make()
                 ->title('Operational intake requires at least one channel. Please create a channel first.')
@@ -485,6 +492,22 @@ class HELOSImportCenter extends Page implements HasForms
                 6
             );
 
+            $businessUnitName = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['business unit', 'business_unit', 'workspace_or_business_unit'],
+                15
+            ));
+
+            $channelName = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['service/channel', 'channel', 'service_or_pipeline'],
+                14
+            ));
+
+            $resolvedChannel = $channelMap[mb_strtolower($channelName)] ?? $defaultChannel;
+
             if ($orderNo === '' && $phone === '') {
                 $errors[] = "Row {$line}: Order No or Phone is required.";
                 continue;
@@ -543,7 +566,7 @@ class HELOSImportCenter extends Page implements HasForms
 
             $orderQuery = Order::query()
                 ->where('customer_id', $customer->id)
-                ->where('channel_id', $channel->id);
+                ->where('channel_id', $resolvedChannel->id);
 
             if ($orderNo !== '') {
 
@@ -570,11 +593,12 @@ class HELOSImportCenter extends Page implements HasForms
                 continue;
             }
 
-            Order::create([
+            $order = Order::create([
                 'customer_id' => $customer->id,
-                'channel_id' => $channel->id,
+                'channel_id' => $resolvedChannel->id,
                 'external_order_no' => $orderNo ?: null,
                 'source' => 'manual',
+                'channel_reference' => $channelName !== '' ? $channelName : null,
                 'order_date' => $orderDate,
                 'total_amount' => $codAmount,
                 'payment_method' => 'cod',
@@ -630,6 +654,94 @@ class HELOSImportCenter extends Page implements HasForms
                 'risk_level' => 'new',
                 'user_id' => Auth::id(),
             ]);
+
+            $productText = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['products', 'product text', 'product', 'sku'],
+                5
+            ));
+
+            $parsedItem = $this->parseOperationalProductText($productText);
+
+            if ($productText !== '') {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_name' => $parsedItem['name'],
+                    'sku' => $parsedItem['sku'],
+                    'quantity' => $parsedItem['quantity'],
+                    'unit_price' => $parsedItem['quantity'] > 0
+                        ? round($codAmount / $parsedItem['quantity'], 2)
+                        : $codAmount,
+                    'total_price' => $codAmount,
+                ]);
+            }
+
+            $businessUnitId = $context['business_unit_id'] ?? null;
+
+            if ($businessUnitId === null && $businessUnitName !== '') {
+                $businessUnitId = BusinessUnit::query()
+                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($businessUnitName)])
+                    ->value('id');
+            }
+
+            $product = null;
+
+            if (! empty($parsedItem['sku'])) {
+                $productQuery = Product::query()
+                    ->where('sku', $parsedItem['sku']);
+
+                if ($businessUnitId !== null) {
+                    $productQuery->where(function ($q) use ($businessUnitId) {
+                        $q->where('business_unit_id', $businessUnitId)
+                            ->orWhereNull('business_unit_id');
+                    });
+                }
+
+                $product = $productQuery->first();
+            }
+
+            $isConfirmed = in_array(
+                mb_strtolower((string) $this->getMappedValue(
+                    $row,
+                    $headerMap,
+                    ['confirmation state', 'verification status'],
+                    13
+                )),
+                ['confirmed', 'confirm', 'yes', 'approved'],
+                true
+            );
+
+            if ($isConfirmed && $businessUnitId !== null && $product) {
+                DailyCODOperation::updateOrCreate(
+                    [
+                        'operation_date' => now()->parse($orderDate)->toDateString(),
+                        'order_code' => $orderNo !== '' ? $orderNo : 'order-' . $order->id,
+                        'business_unit_id' => $businessUnitId,
+                        'product_id' => $product->id,
+                    ],
+                    [
+                        'quantity' => $parsedItem['quantity'],
+                        'selling_price' => $parsedItem['quantity'] > 0
+                            ? round($codAmount / $parsedItem['quantity'], 2)
+                            : $codAmount,
+                        'product_cost' => (float) ($product->product_cost ?? 0),
+                        'courier_cost' => (float) ($product->expected_courier_cost ?? 0),
+                        'expected_return_percentage' => (
+                            (float) ($product->expected_courier_cost ?? 0) > 0
+                        )
+                            ? round(((float) ($product->return_loss_estimate ?? 0) / (float) $product->expected_courier_cost) * 100, 2)
+                            : 0,
+                        'status' => 'queued',
+                        'notes' => trim((string) $this->getMappedValue(
+                            $row,
+                            $headerMap,
+                            ['remarks', 'notes'],
+                            10
+                        )) ?: null,
+                    ]
+                );
+            }
 
             $accepted++;
         }
@@ -875,6 +987,40 @@ class HELOSImportCenter extends Page implements HasForms
         }
 
         return $map;
+    }
+
+    private function parseOperationalProductText(string $raw): array
+    {
+        $value = trim($raw);
+
+        if ($value === '') {
+            return [
+                'name' => 'Unknown Item',
+                'sku' => null,
+                'quantity' => 1,
+            ];
+        }
+
+        $quantity = 1;
+
+        if (preg_match('/(?:x|\*)\s*(\d+)$/i', $value, $matches) === 1) {
+            $quantity = max(1, (int) $matches[1]);
+            $value = trim((string) preg_replace('/(?:x|\*)\s*\d+$/i', '', $value));
+        }
+
+        $sku = null;
+
+        if (preg_match('/([A-Za-z0-9]+(?:[-_\/][A-Za-z0-9]+)+)/', $value, $matches) === 1) {
+            $sku = mb_strtoupper(trim($matches[1]));
+        } elseif (preg_match('/^[A-Za-z0-9]{4,}$/', $value) === 1) {
+            $sku = mb_strtoupper($value);
+        }
+
+        return [
+            'name' => $value,
+            'sku' => $sku,
+            'quantity' => $quantity,
+        ];
     }
 
     private function getMappedValue(
