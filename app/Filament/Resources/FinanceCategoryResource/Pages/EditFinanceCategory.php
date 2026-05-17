@@ -7,5 +7,5 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditFinanceCategory extends EditRecord
 {
-    protected static string  = FinanceCategoryResource::class;
+    protected static string $resource = FinanceCategoryResource::class;
 }

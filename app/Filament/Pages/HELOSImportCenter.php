@@ -14,6 +14,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Actions\Action;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -91,6 +92,8 @@ class HELOSImportCenter extends Page implements HasForms
         $imported = 0;
         $errors = [];
 
+        $headerMap = $this->buildHeaderMap($rows[0] ?? []);
+
         foreach (array_slice($rows, 1) as $index => $row) {
             $line = $index + 2;
 
@@ -98,8 +101,8 @@ class HELOSImportCenter extends Page implements HasForms
                 continue;
             }
 
-            $businessUnitId = $businessUnitMap[mb_strtolower(trim((string) ($row[1] ?? '')))] ?? null;
-            $categoryId = $categoryMap[mb_strtolower(trim((string) ($row[2] ?? '')))] ?? null;
+            $businessUnitId = $businessUnitMap[mb_strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['business unit', 'business_unit'], 1)))] ?? null;
+            $categoryId = $categoryMap[mb_strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['category', 'finance category', 'finance_category'], 2)))] ?? null;
 
             if (! $businessUnitId) {
                 $errors[] = "Row {$line}: Business Unit not found.";
@@ -111,34 +114,55 @@ class HELOSImportCenter extends Page implements HasForms
                 continue;
             }
 
-            $type = strtolower(trim((string) ($row[3] ?? '')));
+            $type = strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['type', 'transaction type'], 3)));
             if (! in_array($type, ['income', 'expense', 'transfer', 'receivable', 'payable'], true)) {
                 $errors[] = "Row {$line}: Type must be income/expense/transfer/receivable/payable.";
                 continue;
             }
 
-            $amount = (float) ($row[7] ?? 0);
+            $amount = (float) $this->getMappedValue($row, $headerMap, ['amount', 'value'], 7);
             if ($amount <= 0) {
                 $errors[] = "Row {$line}: Amount must be greater than 0.";
                 continue;
             }
 
+            $recordDate = ! empty($this->getMappedValue($row, $headerMap, ['record date', 'date', 'record_date'], 0))
+                ? (string) $this->getMappedValue($row, $headerMap, ['record date', 'date', 'record_date'], 0)
+                : now()->toDateString();
+
+            $referenceNo = $this->getMappedValue($row, $headerMap, ['reference no', 'reference', 'reference_no'], 10);
+
+            $isDuplicate = MoneyRecord::query()
+                ->whereDate('record_date', $recordDate)
+                ->where('business_unit_id', $businessUnitId)
+                ->where('finance_category_id', $categoryId)
+                ->where('type', $type)
+                ->where('amount', $amount)
+                ->when($referenceNo, fn ($q) => $q->where('reference_no', $referenceNo))
+                ->exists();
+
+            if ($isDuplicate) {
+                $errors[] = "Row {$line}: Duplicate transaction detected.";
+                continue;
+            }
+
             MoneyRecord::create([
-                'record_date' => ! empty($row[0]) ? (string) $row[0] : now()->toDateString(),
+                'record_date' => $recordDate,
                 'business_unit_id' => $businessUnitId,
                 'finance_category_id' => $categoryId,
                 'user_id' => Auth::id(),
                 'type' => $type,
                 'amount' => $amount,
-                'payment_method' => $row[5] ?? null,
-                'reference_no' => $row[10] ?? null,
-                'description' => $row[11] ?? null,
+                'payment_method' => $this->getMappedValue($row, $headerMap, ['payment method', 'payment_method'], 5),
+                'reference_no' => $referenceNo,
+                'description' => $this->getMappedValue($row, $headerMap, ['description', 'notes'], 11),
                 'status' => 'approved',
             ]);
 
             $imported++;
         }
 
+        $this->logImportAudit('money_records', count($rows) - 1, $imported, $errors);
         $this->notifyImportResult("Imported {$imported} rows.", $errors);
         $this->form->fill(['file' => null]);
     }
@@ -162,6 +186,8 @@ class HELOSImportCenter extends Page implements HasForms
         $imported = 0;
         $errors = [];
 
+        $headerMap = $this->buildHeaderMap($rows[0] ?? []);
+
         foreach (array_slice($rows, 1) as $index => $row) {
             $line = $index + 2;
 
@@ -169,10 +195,10 @@ class HELOSImportCenter extends Page implements HasForms
                 continue;
             }
 
-            $name = trim((string) ($row[0] ?? ''));
-            $type = strtolower(trim((string) ($row[2] ?? '')));
-            $parentName = trim((string) ($row[3] ?? ''));
-            $isActive = in_array(strtolower((string) ($row[4] ?? '1')), ['1', 'true', 'yes'], true);
+            $name = trim((string) $this->getMappedValue($row, $headerMap, ['name', 'category'], 0));
+            $type = strtolower(trim((string) $this->getMappedValue($row, $headerMap, ['type'], 2)));
+            $parentName = trim((string) $this->getMappedValue($row, $headerMap, ['parent', 'parent category', 'parent_id'], 3));
+            $isActive = in_array(strtolower((string) $this->getMappedValue($row, $headerMap, ['active', 'is_active'], 4)), ['1', 'true', 'yes'], true);
 
             if ($name === '') {
                 $errors[] = "Row {$line}: Name is required.";
@@ -196,7 +222,7 @@ class HELOSImportCenter extends Page implements HasForms
             FinanceCategory::updateOrCreate(
                 ['name' => $name, 'type' => $type],
                 [
-                    'code' => trim((string) ($row[1] ?? '')) ?: null,
+                    'code' => trim((string) $this->getMappedValue($row, $headerMap, ['code'], 1)) ?: null,
                     'parent_id' => $parentId,
                     'is_active' => $isActive,
                 ]
@@ -205,8 +231,47 @@ class HELOSImportCenter extends Page implements HasForms
             $imported++;
         }
 
+        $this->logImportAudit('finance_categories', count($rows) - 1, $imported, $errors);
         $this->notifyImportResult("Imported {$imported} categories.", $errors);
         $this->form->fill(['category_file' => null]);
+    }
+
+    private function buildHeaderMap(array $headerRow): array
+    {
+        $map = [];
+        foreach ($headerRow as $i => $header) {
+            $normalized = mb_strtolower(trim((string) $header));
+            if ($normalized !== '') {
+                $map[$normalized] = $i;
+            }
+        }
+
+        return $map;
+    }
+
+    private function getMappedValue(array $row, array $headerMap, array $aliases, int $fallbackIndex): mixed
+    {
+        foreach ($aliases as $alias) {
+            $key = mb_strtolower(trim($alias));
+            if (array_key_exists($key, $headerMap)) {
+                return $row[$headerMap[$key]] ?? null;
+            }
+        }
+
+        return $row[$fallbackIndex] ?? null;
+    }
+
+    private function logImportAudit(string $module, int $totalRows, int $imported, array $errors): void
+    {
+        Log::info('HELOS import audit', [
+            'module' => $module,
+            'total_rows' => $totalRows,
+            'imported_rows' => $imported,
+            'failed_rows' => count($errors),
+            'sample_errors' => array_slice($errors, 0, 10),
+            'user_id' => Auth::id(),
+            'timestamp' => now()->toDateTimeString(),
+        ]);
     }
 
     private function getRowsFromUpload(string $field, string $missingMessage): ?array
