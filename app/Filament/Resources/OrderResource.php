@@ -28,6 +28,7 @@ class OrderResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $navigationGroup = 'HELOS';
+    protected static bool $shouldRegisterNavigation = true;
 
       protected static function shouldRegisterNavigation(): bool
     {
@@ -35,6 +36,11 @@ class OrderResource extends Resource
     }
 
     public static function canAccess(): bool
+    {
+        return true;
+    }
+
+    public static function canViewAny(): bool
     {
         return true;
     }
