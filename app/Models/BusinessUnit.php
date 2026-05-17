@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BusinessUnit extends Model
@@ -33,23 +33,4 @@ class BusinessUnit extends Model
         return $this->hasMany(MoneyRecord::class);
     }
 
-    public function codPerformanceAssumptions(): HasMany
-    {
-        return $this->hasMany(CODPerformanceAssumption::class);
-    }
-
-    public function codAssumptions(): HasMany
-    {
-        return $this->hasMany(CODPerformanceAssumption::class);
-    }
-
-    public function dailyCodOperations(): HasMany
-    {
-        return $this->hasMany(DailyCODOperation::class);
-    }
-
-    public function products(): HasMany
-    {
-        return $this->hasMany(Product::class);
-    }
-}
+  
