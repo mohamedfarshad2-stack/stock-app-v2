@@ -14,7 +14,7 @@ class BusinessUnitResource extends Resource
 {
     protected static ?string $model = BusinessUnit::class;
     protected static ?string $navigationIcon = 'heroicon-o-office-building';
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'Settings';
     protected static ?string $navigationLabel = 'Business Units';
 
     public static function form(Form $form): Form

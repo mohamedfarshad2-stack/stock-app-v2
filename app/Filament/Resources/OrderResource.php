@@ -20,6 +20,8 @@ use Filament\Resources\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\TextInputColumn;
+use Filament\Tables\Columns\SelectColumn;
 
 class OrderResource extends Resource
 {
@@ -27,16 +29,22 @@ class OrderResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static ?string $navigationGroup = 'Order Management';
+    protected static ?string $navigationGroup = 'HELOS Core';
+    protected static bool $shouldRegisterNavigation = true;
 
       protected static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->role === 1;
+        return true;
     }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role === 1;
+        return true;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return true;
     }
 
     public static function form(Form $form): Form
@@ -98,6 +106,15 @@ class OrderResource extends Resource
             Select::make('channel_id')
                 ->relationship('channel','name')
                 ->required(),
+
+            TextInput::make('external_order_no')
+                ->label('Order No')
+                ->maxLength(255),
+
+            TextInput::make('channel_reference')
+                ->label('Tracking / Reference')
+                ->reactive()
+                ->maxLength(255),
 
             DatePicker::make('order_date')
                 ->default(now())
@@ -180,6 +197,25 @@ class OrderResource extends Resource
                 ->dehydrated()
                 ->default(0),
 
+            Select::make('verification_status')
+                ->options([
+                    'pending' => 'Pending',
+                    'confirmed' => 'Confirmed',
+                    'no_answer' => 'No Answer',
+                    'call_back' => 'Call Back',
+                ])
+                ->default('pending'),
+
+            Select::make('delivery_status')
+                ->options([
+                    'pending' => 'Pending',
+                    'dispatched' => 'Dispatched',
+                    'delivered' => 'Delivered',
+                    'returned' => 'Returned',
+                    'cancelled' => 'Cancelled',
+                ])
+                ->default('pending'),
+
         ]);
     }
 
@@ -211,8 +247,42 @@ class OrderResource extends Resource
             TextColumn::make('order_date')
                 ->date(),
 
+            TextColumn::make('external_order_no')
+                ->label('Order No')
+                ->searchable(),
+
+            TextColumn::make('channel_reference')
+                ->label('Tracking / Ref')
+                ->searchable(),
+
+            TextInputColumn::make('channel_reference')
+                ->label('Edit Tracking')
+                ->rules(['nullable', 'string', 'max:255'])
+                ->afterStateUpdated(function (Order $record, ?string $state): void {
+                    if (
+                        trim((string) $state) !== ''
+                        && $record->delivery_status === 'pending'
+                    ) {
+                        $record->delivery_status = 'dispatched';
+                        $record->save();
+                    }
+                }),
+
             TextColumn::make('total_amount')
                 ->label('Amount'),
+
+            BadgeColumn::make('verification_status')
+                ->label('Confirmation'),
+
+            SelectColumn::make('delivery_status')
+                ->label('Delivery')
+                ->options([
+                    'pending' => 'Pending',
+                    'dispatched' => 'Dispatched',
+                    'delivered' => 'Delivered',
+                    'returned' => 'Returned',
+                    'cancelled' => 'Cancelled',
+                ]),
 
             BadgeColumn::make('risk_level')
                 ->colors([
@@ -220,14 +290,6 @@ class OrderResource extends Resource
                     'primary' => 'medium',
                     'warning' => 'high',
                     'danger' => 'very_high'
-                ]),
-
-            BadgeColumn::make('delivery_status')
-                ->colors([
-                    'primary' => 'pending',
-                    'warning' => 'shipped',
-                    'success' => 'delivered',
-                    'danger' => 'returned'
                 ]),
 
             TextColumn::make('created_at')
