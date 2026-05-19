@@ -16,22 +16,44 @@ class MoneyRecordResource extends Resource
 {
     protected static ?string $model = MoneyRecord::class;
     protected static ?string $navigationIcon = 'heroicon-o-cash';
-    protected static ?string $navigationGroup = 'HELOS';
-    protected static ?string $navigationLabel = 'Money Records';
+    protected static ?string $navigationGroup = 'Finance';
+    protected static ?string $navigationLabel = 'Transactions';
+
+    private const TYPE_OPTIONS = [
+        'income' => 'Income',
+        'expense' => 'Direct / Overhead Cost',
+        'transfer' => 'Transfer',
+        'receivable' => 'Receivable',
+        'payable' => 'Payable',
+    ];
 
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\Select::make('business_unit_id')->options(BusinessUnit::query()->pluck('name', 'id'))->searchable()->required(),
-            Forms\Components\Select::make('finance_category_id')->options(FinanceCategory::query()->pluck('name', 'id'))->searchable()->required(),
             Forms\Components\DatePicker::make('record_date')->default(now())->required(),
-            Forms\Components\Select::make('type')->options([
-                'expense' => 'Operational Cost',
-                'income' => 'Revenue',
-                'transfer' => 'Transfer',
-                'receivable' => 'Receivable',
-                'payable' => 'Payable',
-            ])->default('expense')->required(),
+            Forms\Components\Select::make('type')
+                ->options(self::TYPE_OPTIONS)
+                ->default('expense')
+                ->required()
+                ->reactive(),
+            Forms\Components\Select::make('finance_category_id')
+                ->label('Finance Category')
+                ->options(function (callable $get) {
+                    $type = (string) ($get('type') ?? 'expense');
+
+                    return FinanceCategory::query()
+                        ->where('is_active', true)
+                        ->when(
+                            $type !== '',
+                            fn ($q) => $q->where('type', $type)
+                        )
+                        ->orderBy('name')
+                        ->pluck('name', 'id');
+                })
+                ->searchable()
+                ->required()
+                ->helperText('Categories are filtered by selected transaction type for simpler finance entry.'),
             Forms\Components\TextInput::make('amount')->numeric()->required(),
             Forms\Components\TextInput::make('payment_method'),
             Forms\Components\TextInput::make('reference_no'),
@@ -57,13 +79,7 @@ class MoneyRecordResource extends Resource
         ])->filters([
             Tables\Filters\SelectFilter::make('business_unit_id')->label('Business Unit')->relationship('businessUnit', 'name'),
             Tables\Filters\SelectFilter::make('finance_category_id')->label('Category')->relationship('financeCategory', 'name'),
-            Tables\Filters\SelectFilter::make('type')->options([
-                'expense' => 'Operational Cost',
-                'income' => 'Revenue',
-                'transfer' => 'Transfer',
-                'receivable' => 'Receivable',
-                'payable' => 'Payable',
-            ]),
+            Tables\Filters\SelectFilter::make('type')->options(self::TYPE_OPTIONS),
             Tables\Filters\SelectFilter::make('status')->options([
                 'draft' => 'Draft','approved' => 'Approved','rejected' => 'Rejected',
             ]),

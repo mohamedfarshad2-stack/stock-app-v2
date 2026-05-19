@@ -15,7 +15,7 @@ use Filament\Tables;
 class DailyCODOperationResource extends Resource
 {
     protected static ?string $model = DailyCODOperation::class;
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'Advanced';
     protected static ?string $navigationLabel = 'Daily COD Operations';
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 

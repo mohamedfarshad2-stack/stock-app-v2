@@ -29,7 +29,7 @@ class HELOSImportCenter extends Page implements HasForms
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-upload';
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'HELOS Core';
     protected static ?string $navigationLabel = 'Import Center';
     protected static bool $shouldRegisterNavigation = true;
     protected static ?int $navigationSort = 5;
