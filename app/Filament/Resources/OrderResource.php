@@ -247,15 +247,20 @@ class OrderResource extends Resource
             TextInputColumn::make('channel_reference')
                 ->label('Edit Tracking')
                 ->rules(['nullable', 'string', 'max:255'])
-                ->afterStateUpdated(function (Order $record, ?string $state): void {
+                ->updateStateUsing(function ($state, Order $record) {
+
+                    $record->channel_reference = $state;
 
                     if (
                         trim((string) $state) !== ''
                         && $record->delivery_status === 'pending'
                     ) {
                         $record->delivery_status = 'dispatched';
-                        $record->save();
                     }
+
+                    $record->save();
+
+                    return $state;
                 }),
 
             TextColumn::make('total_amount')
