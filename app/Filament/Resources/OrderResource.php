@@ -6,22 +6,22 @@ use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
 
 use Filament\Forms;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 
 use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Columns\SelectColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\TextInputColumn;
 
 class OrderResource extends Resource
 {
@@ -30,6 +30,7 @@ class OrderResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $navigationGroup = 'HELOS Core';
+
     protected static bool $shouldRegisterNavigation = true;
 
     public static function canAccess(): bool
@@ -46,47 +47,66 @@ class OrderResource extends Resource
     {
         return $form->schema([
 
+            /*
+            |--------------------------------------------------------------------------
+            | CUSTOMER
+            |--------------------------------------------------------------------------
+            */
+
             Select::make('customer_id')
                 ->label('Customer')
-                ->relationship('customer','name')
-                ->searchable(['name','phone'])
+                ->relationship('customer', 'name')
+                ->searchable(['name', 'phone'])
                 ->required()
                 ->reactive()
-                ->getOptionLabelFromRecordUsing(fn ($record) => $record->name.' - '.$record->phone),
+                ->getOptionLabelFromRecordUsing(
+                    fn ($record) => $record->name . ' - ' . $record->phone
+                ),
 
             Placeholder::make('customer_history')
-    ->label('Customer History')
-    ->content(function ($get) {
+                ->label('Customer History')
+                ->content(function ($get) {
 
-        $customerId = $get('customer_id');
+                    $customerId = $get('customer_id');
 
-        if (!$customerId) {
-            return 'No customer selected';
-        }
+                    if (! $customerId) {
+                        return 'No customer selected';
+                    }
 
-        $orders = \App\Models\Order::where('customer_id', $customerId)->count();
+                    $orders = \App\Models\Order::where(
+                        'customer_id',
+                        $customerId
+                    )->count();
 
-        $returns = \App\Models\Order::where('customer_id', $customerId)
-            ->where('delivery_status', 'cancelled')
-            ->count();
+                    $returns = \App\Models\Order::where(
+                        'customer_id',
+                        $customerId
+                    )
+                    ->whereIn('delivery_status', ['returned', 'cancelled'])
+                    ->count();
 
-        // risk logic
-        if ($returns >= 5) {
-            $risk = 'very_high';
-        } elseif ($returns >= 3) {
-            $risk = 'high';
-        } elseif ($returns >= 1) {
-            $risk = 'medium';
-        } else {
-            $risk = 'low';
-        }
+                    if ($returns >= 5) {
+                        $risk = 'very_high';
+                    } elseif ($returns >= 3) {
+                        $risk = 'high';
+                    } elseif ($returns >= 1) {
+                        $risk = 'medium';
+                    } else {
+                        $risk = 'low';
+                    }
 
-        return "Orders: $orders | Returns: $returns | Risk: $risk";
-    })
-    ->reactive(),
+                    return "Orders: {$orders} | Returns: {$returns} | Risk: {$risk}";
+                })
+                ->reactive(),
+
+            /*
+            |--------------------------------------------------------------------------
+            | ORDER DETAILS
+            |--------------------------------------------------------------------------
+            */
 
             Select::make('channel_id')
-                ->relationship('channel','name')
+                ->relationship('channel', 'name')
                 ->required(),
 
             TextInput::make('external_order_no')
@@ -121,7 +141,7 @@ class OrderResource extends Resource
                         ->required(),
 
                     Select::make('product_category_id')
-                        ->relationship('category','name')
+                        ->relationship('category', 'name')
                         ->label('Category'),
 
                     TextInput::make('sku'),
@@ -131,9 +151,14 @@ class OrderResource extends Resource
                         ->default(1)
                         ->reactive()
                         ->required()
-                        ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                        ->afterStateUpdated(function (
+                            $state,
+                            callable $get,
+                            callable $set
+                        ) {
 
                             $price = $get('selling_price') ?? 0;
+
                             $total = $state * $price;
 
                             $set('total_price', $total);
@@ -146,9 +171,14 @@ class OrderResource extends Resource
                         ->reactive()
                         ->required()
                         ->dehydrated()
-                        ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                        ->afterStateUpdated(function (
+                            $state,
+                            callable $get,
+                            callable $set
+                        ) {
 
                             $qty = $get('quantity') ?? 0;
+
                             $total = $qty * $state;
 
                             $set('total_price', $total);
@@ -178,6 +208,12 @@ class OrderResource extends Resource
                 ->disabled()
                 ->dehydrated()
                 ->default(0),
+
+            /*
+            |--------------------------------------------------------------------------
+            | STATUS
+            |--------------------------------------------------------------------------
+            */
 
             Select::make('verification_status')
                 ->options([
@@ -209,88 +245,126 @@ class OrderResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table->columns([
+        return $table
+            ->columns([
 
-            TextColumn::make('id')
-                ->sortable(),
+                TextColumn::make('id')
+                    ->sortable(),
 
-            TextColumn::make('customer.name')
-                ->label('Customer')
-                ->formatStateUsing(fn ($record) =>
-                    $record->customer
-                        ? $record->customer->name.' - '.$record->customer->phone
-                        : '-'
-                )
-                ->searchable(),
+                TextColumn::make('customer.name')
+                    ->label('Customer')
+                    ->formatStateUsing(
+                        fn ($record) =>
+                            $record->customer
+                                ? $record->customer->name . ' - ' . $record->customer->phone
+                                : '-'
+                    )
+                    ->searchable(),
 
-            TextColumn::make('channel.name')
-                ->label('Channel'),
+                TextColumn::make('channel.name')
+                    ->label('Channel'),
 
-            TextColumn::make('order_date')
-                ->date(),
+                TextColumn::make('order_date')
+                    ->date(),
 
-            TextColumn::make('external_order_no')
-                ->label('Order No')
-                ->searchable(),
+                TextColumn::make('external_order_no')
+                    ->label('Order No')
+                    ->searchable(),
 
-            TextInputColumn::make('channel_reference')
-                ->label('Tracking / Ref')
-                ->rules(['nullable', 'string', 'max:255']),
+                TextColumn::make('channel_reference')
+                    ->label('Tracking / Ref')
+                    ->searchable(),
 
-            TextColumn::make('total_amount')
-                ->label('Amount'),
+                TextInputColumn::make('channel_reference')
+                    ->label('Edit Tracking')
+                    ->rules(['nullable', 'string', 'max:255'])
+                    ->afterStateUpdated(function (
+                        Order $record,
+                        ?string $state
+                    ): void {
 
-            BadgeColumn::make('verification_status')
-                ->label('Confirmation'),
+                        $record->channel_reference = $state;
 
-            SelectColumn::make('delivery_status')
-                ->label('Delivery')
-                ->options([
-                    'pending' => 'Pending',
-                    'dispatched' => 'Dispatched',
-                    'delivered' => 'Delivered',
-                    'returned' => 'Returned',
-                    'cancelled' => 'Cancelled',
-                ]),
+                        if (
+                            trim((string) $state) !== ''
+                            && $record->delivery_status === 'pending'
+                        ) {
+                            $record->delivery_status = 'dispatched';
+                        }
 
-            BadgeColumn::make('risk_level')
-                ->colors([
-                    'success' => 'low',
-                    'primary' => 'medium',
-                    'warning' => 'high',
-                    'danger' => 'very_high'
-                ]),
+                        $record->save();
+                    }),
 
-            TextColumn::make('created_at')
-                ->dateTime(),
+                TextColumn::make('total_amount')
+                    ->label('Amount'),
 
-        ])->actions([
-            Tables\Actions\ViewAction::make(),
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\Action::make('markDelivered')
-                ->label('Delivered')
-                ->icon('heroicon-o-check-circle')
-                ->color('success')
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->delivery_status = 'delivered';
-                    $record->save();
-                })
-                ->visible(fn ($record) => $record->delivery_status !== 'delivered'),
-            Tables\Actions\Action::make('cancelOrder')
-                ->label('Cancel')
-                ->icon('heroicon-o-x-circle')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->delivery_status = 'cancelled';
-                    $record->save();
-                })
-                ->visible(fn ($record) => $record->delivery_status !== 'cancelled'),
-        ])
-        ->bulkActions([
-            Tables\Actions\DeleteBulkAction::make(),
-        ]);
+                BadgeColumn::make('verification_status')
+                    ->label('Confirmation'),
+
+                SelectColumn::make('delivery_status')
+                    ->label('Delivery')
+                    ->options([
+                        'pending' => 'Pending',
+                        'dispatched' => 'Dispatched',
+                        'delivered' => 'Delivered',
+                        'returned' => 'Returned',
+                        'cancelled' => 'Cancelled',
+                    ]),
+
+                BadgeColumn::make('risk_level')
+                    ->colors([
+                        'success' => 'low',
+                        'primary' => 'medium',
+                        'warning' => 'high',
+                        'danger' => 'very_high',
+                    ]),
+
+                TextColumn::make('created_at')
+                    ->dateTime(),
+
+            ])
+            ->actions([
+
+                Tables\Actions\ViewAction::make(),
+
+                Tables\Actions\EditAction::make(),
+
+                Tables\Actions\Action::make('markDelivered')
+                    ->label('Delivered')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+
+                        $record->delivery_status = 'delivered';
+
+                        $record->save();
+                    })
+                    ->visible(
+                        fn ($record) =>
+                            $record->delivery_status !== 'delivered'
+                    ),
+
+                Tables\Actions\Action::make('cancelOrder')
+                    ->label('Cancel')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+
+                        $record->delivery_status = 'cancelled';
+
+                        $record->save();
+                    })
+                    ->visible(
+                        fn ($record) =>
+                            $record->delivery_status !== 'cancelled'
+                    ),
+
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getRelations(): array

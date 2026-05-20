@@ -147,12 +147,26 @@ class HELOSDashboard extends Page
             ? MoneyRecord::query()
                 ->select(
                     'finance_categories.name',
-                    DB::raw(
-                        "SUM(CASE WHEN money_records.type = 'income' THEN money_records.amount ELSE 0 END) as income_total"
-                    ),
-                    DB::raw(
-                        "SUM(CASE WHEN money_records.type = 'expense' THEN money_records.amount ELSE 0 END) as expense_total"
-                    )
+
+                    DB::raw("
+                        SUM(
+                            CASE
+                                WHEN money_records.type = 'income'
+                                THEN money_records.amount
+                                ELSE 0
+                            END
+                        ) as income_total
+                    "),
+
+                    DB::raw("
+                        SUM(
+                            CASE
+                                WHEN money_records.type = 'expense'
+                                THEN money_records.amount
+                                ELSE 0
+                            END
+                        ) as expense_total
+                    ")
                 )
                 ->join(
                     'finance_categories',
@@ -162,7 +176,25 @@ class HELOSDashboard extends Page
                 )
                 ->whereBetween('money_records.record_date', [$start, $end])
                 ->groupBy('finance_categories.name')
-                ->orderByDesc(DB::raw('income_total + expense_total'))
+
+                ->orderByRaw("
+                    SUM(
+                        CASE
+                            WHEN money_records.type = 'income'
+                            THEN money_records.amount
+                            ELSE 0
+                        END
+                    )
+                    +
+                    SUM(
+                        CASE
+                            WHEN money_records.type = 'expense'
+                            THEN money_records.amount
+                            ELSE 0
+                        END
+                    ) DESC
+                ")
+
                 ->limit(10)
                 ->get()
             : collect();
@@ -172,12 +204,26 @@ class HELOSDashboard extends Page
             ? MoneyRecord::query()
                 ->select(
                     'business_units.name',
-                    DB::raw(
-                        "SUM(CASE WHEN money_records.type = 'income' THEN money_records.amount ELSE 0 END) as income_total"
-                    ),
-                    DB::raw(
-                        "SUM(CASE WHEN money_records.type = 'expense' THEN money_records.amount ELSE 0 END) as expense_total"
-                    )
+
+                    DB::raw("
+                        SUM(
+                            CASE
+                                WHEN money_records.type = 'income'
+                                THEN money_records.amount
+                                ELSE 0
+                            END
+                        ) as income_total
+                    "),
+
+                    DB::raw("
+                        SUM(
+                            CASE
+                                WHEN money_records.type = 'expense'
+                                THEN money_records.amount
+                                ELSE 0
+                            END
+                        ) as expense_total
+                    ")
                 )
                 ->join(
                     'business_units',
@@ -187,7 +233,25 @@ class HELOSDashboard extends Page
                 )
                 ->whereBetween('money_records.record_date', [$start, $end])
                 ->groupBy('business_units.name')
-                ->orderByDesc(DB::raw('income_total - expense_total'))
+
+                ->orderByRaw("
+                    SUM(
+                        CASE
+                            WHEN money_records.type = 'income'
+                            THEN money_records.amount
+                            ELSE 0
+                        END
+                    )
+                    -
+                    SUM(
+                        CASE
+                            WHEN money_records.type = 'expense'
+                            THEN money_records.amount
+                            ELSE 0
+                        END
+                    ) DESC
+                ")
+
                 ->limit(10)
                 ->get()
             : collect();
