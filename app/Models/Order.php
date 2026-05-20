@@ -56,6 +56,20 @@ protected static function booted()
         $order->user_id = auth()->id();
     });
 
+    // Keep operational lifecycle consistent:
+    // if tracking/reference is added while order is pending,
+    // move it to dispatched.
+    static::saving(function ($order) {
+        $reference = trim((string) ($order->channel_reference ?? ''));
+
+        if (
+            $reference !== ''
+            && ($order->delivery_status ?? 'pending') === 'pending'
+        ) {
+            $order->delivery_status = 'dispatched';
+        }
+    });
+
     // 🔹 When order is created/updated → update customer stats
     static::saved(function ($order) {
         if ($order->customer) {

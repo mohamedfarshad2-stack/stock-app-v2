@@ -1,6 +1,3 @@
-# Complete `app/Filament/Resources/OrderResource.php`
-
-```php
 <?php
 
 namespace App\Filament\Resources;
@@ -403,12 +400,3 @@ class OrderResource extends Resource
         $set('../../total_amount', $sum);
     }
 }
-```
-
-After replacing the file run:
-
-```bash
-git add app/Filament/Resources/OrderResource.php
-git commit -m "resolve OrderResource merge conflict"
-git push origin helos-finance-v2
-```
