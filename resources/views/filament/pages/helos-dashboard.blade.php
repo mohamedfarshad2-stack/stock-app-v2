@@ -33,4 +33,37 @@
             @endforeach
         </x-filament::card>
     </div>
+
+    <div class="grid grid-cols-1 gap-4 mt-6 lg:grid-cols-2">
+        <x-filament::card>
+            <h3 class="font-semibold mb-3">Monthly finance summary by category</h3>
+            @forelse($monthlyFinanceByCategory as $item)
+                <div class="flex justify-between text-sm py-1">
+                    <span>{{ $item->name }}</span>
+                    <span>
+                        +Rs. {{ number_format((float) $item->income_total, 2) }}
+                        /
+                        -Rs. {{ number_format((float) $item->expense_total, 2) }}
+                    </span>
+                </div>
+            @empty
+                <p class="text-sm text-gray-500">No monthly finance records yet.</p>
+            @endforelse
+        </x-filament::card>
+
+        <x-filament::card>
+            <h3 class="font-semibold mb-3">Monthly BU-wise finance summary</h3>
+            @forelse($monthlyFinanceByBusinessUnit as $item)
+                @php
+                    $net = (float) $item->income_total - (float) $item->expense_total;
+                @endphp
+                <div class="flex justify-between text-sm py-1">
+                    <span>{{ $item->name }}</span>
+                    <span>Rs. {{ number_format($net, 2) }}</span>
+                </div>
+            @empty
+                <p class="text-sm text-gray-500">No monthly business-unit finance records yet.</p>
+            @endforelse
+        </x-filament::card>
+    </div>
 </x-filament::page>

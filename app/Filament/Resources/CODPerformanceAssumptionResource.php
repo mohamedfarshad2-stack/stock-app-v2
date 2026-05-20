@@ -15,9 +15,9 @@ class CODPerformanceAssumptionResource extends Resource
 {
     protected static ?string $model = CODPerformanceAssumption::class;
 
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'Advanced';
 
-    protected static ?string $navigationLabel = 'COD Performance Assumptions';
+    protected static ?string $navigationLabel = 'COD Assumptions';
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
