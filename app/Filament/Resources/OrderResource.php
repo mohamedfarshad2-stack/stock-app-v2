@@ -1,3 +1,6 @@
+# Complete `app/Filament/Resources/OrderResource.php`
+
+```php
 <?php
 
 namespace App\Filament\Resources;
@@ -82,7 +85,7 @@ class OrderResource extends Resource
                         'customer_id',
                         $customerId
                     )
-                    ->where('delivery_status', 'cancelled')
+                    ->whereIn('delivery_status', ['returned', 'cancelled'])
                     ->count();
 
                     if ($returns >= 5) {
@@ -275,51 +278,75 @@ class OrderResource extends Resource
                     ->label('Tracking / Ref')
                     ->searchable(),
 
-TextInputColumn::make('channel_reference')
-    ->label('Edit Tracking')
-    ->rules(['nullable', 'string', 'max:255'])
-    ->updateStateUsing(function ($state, Order $record) {
+                TextInputColumn::make('channel_reference')
+                    ->label('Edit Tracking')
+                    ->rules(['nullable', 'string', 'max:255'])
+                    ->afterStateUpdated(function (
+                        Order $record,
+                        ?string $state
+                    ): void {
 
-        $record->channel_reference = $state;
+                        $record->channel_reference = $state;
 
-        if (
-            trim((string) $state) !== ''
-            && $record->delivery_status === 'pending'
-        ) {
-            $record->delivery_status = 'dispatched';
-        }
+                        if (
+                            trim((string) $state) !== ''
+                            && $record->delivery_status === 'pending'
+                        ) {
+                            $record->delivery_status = 'dispatched';
+                        }
 
-        $record->save();
+                        $record->save();
+                    }),
 
-        return $state;
-    }),
+                TextColumn::make('total_amount')
+                    ->label('Amount'),
 
-TextColumn::make('total_amount')
-    ->label('Amount'),
+                BadgeColumn::make('verification_status')
+                    ->label('Confirmation'),
 
-BadgeColumn::make('verification_status')
-    ->label('Confirmation'),
+                SelectColumn::make('delivery_status')
+                    ->label('Delivery')
+                    ->options([
+                        'pending' => 'Pending',
+                        'dispatched' => 'Dispatched',
+                        'delivered' => 'Delivered',
+                        'returned' => 'Returned',
+                        'cancelled' => 'Cancelled',
+                    ]),
 
-SelectColumn::make('delivery_status')
-    ->label('Delivery')
-    ->options([
-        'pending' => 'Pending',
-        'dispatched' => 'Dispatched',
-        'delivered' => 'Delivered',
-        'returned' => 'Returned',
-        'cancelled' => 'Cancelled',
-    ]),
+                BadgeColumn::make('risk_level')
+                    ->colors([
+                        'success' => 'low',
+                        'primary' => 'medium',
+                        'warning' => 'high',
+                        'danger' => 'very_high',
+                    ]),
 
-BadgeColumn::make('risk_level')
-    ->colors([
-        'success' => 'low',
-        'primary' => 'medium',
-        'warning' => 'high',
-        'danger' => 'very_high',
-    ]),
+                TextColumn::make('created_at')
+                    ->dateTime(),
 
-TextColumn::make('created_at')
-    ->dateTime(),
+            ])
+            ->actions([
+
+                Tables\Actions\ViewAction::make(),
+
+                Tables\Actions\EditAction::make(),
+
+                Tables\Actions\Action::make('markDelivered')
+                    ->label('Delivered')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+
+                        $record->delivery_status = 'delivered';
+
+                        $record->save();
+                    })
+                    ->visible(
+                        fn ($record) =>
+                            $record->delivery_status !== 'delivered'
+                    ),
 
                 Tables\Actions\Action::make('cancelOrder')
                     ->label('Cancel')
@@ -376,3 +403,12 @@ TextColumn::make('created_at')
         $set('../../total_amount', $sum);
     }
 }
+```
+
+After replacing the file run:
+
+```bash
+git add app/Filament/Resources/OrderResource.php
+git commit -m "resolve OrderResource merge conflict"
+git push origin helos-finance-v2
+```
