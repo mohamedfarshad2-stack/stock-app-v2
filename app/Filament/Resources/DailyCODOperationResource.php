@@ -15,14 +15,16 @@ use Filament\Tables;
 class DailyCODOperationResource extends Resource
 {
     protected static ?string $model = DailyCODOperation::class;
-    protected static ?string $navigationGroup = 'HELOS';
-    protected static ?string $navigationLabel = 'Daily COD Operations';
+    protected static ?string $navigationGroup = 'Advanced';
+    protected static ?string $navigationLabel = 'COD Operations';
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\DatePicker::make('operation_date')->required(),
+            Forms\Components\Placeholder::make('advanced_scope_note')
+                ->content('Advanced module: use for expected COD profitability tracking and scenario accuracy, not as the default daily order-entry screen.'),
             Forms\Components\TextInput::make('order_code')->label('Order Code')->helperText('Optional: external order reference'),
             Forms\Components\Select::make('business_unit_id')->relationship('businessUnit', 'name')->required(),
             Forms\Components\Select::make('product_id')->relationship('product', 'name')->searchable()->required()

@@ -11,6 +11,8 @@ use App\Models\Customer;
 use App\Models\FinanceCategory;
 use App\Models\MoneyRecord;
 use App\Models\Order;
+use App\Models\OrderItem;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -27,7 +29,7 @@ class HELOSImportCenter extends Page implements HasForms
     use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-upload';
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'HELOS Core';
     protected static ?string $navigationLabel = 'Import Center';
     protected static bool $shouldRegisterNavigation = true;
     protected static ?int $navigationSort = 5;
@@ -53,7 +55,7 @@ class HELOSImportCenter extends Page implements HasForms
                 ->default('operations')
                 ->required()
                 ->reactive()
-                ->helperText('Choose one import type at a time to keep uploads simple and clear.'),
+                ->helperText('Operational intake entry point: import one dataset at a time to keep order and finance pipelines clean.'),
 
             Forms\Components\FileUpload::make('file')
                 ->label(fn (callable $get) => match ((string) $get('import_profile')) {
@@ -77,7 +79,7 @@ class HELOSImportCenter extends Page implements HasForms
                 )
                 ->searchable()
                 ->visible(fn (callable $get) => (string) $get('import_profile') === 'operations')
-                ->helperText('Optional: used as default context for adaptive import routing and validation.'),
+                ->helperText('Optional: default BU context for operational order intake validation and routing.'),
         ];
     }
 
@@ -406,14 +408,20 @@ class HELOSImportCenter extends Page implements HasForms
         $headerMap = $this->buildHeaderMap($rows[0] ?? []);
 
         $accepted = 0;
+        $skipped = 0;
+        $failed = 0;
 
         $errors = [];
 
-        $channel = Channel::query()
+        $channelMap = Channel::query()
+            ->get()
+            ->keyBy(fn (Channel $channel) => mb_strtolower(trim((string) $channel->name)));
+
+        $defaultChannel = Channel::query()
             ->orderBy('id')
             ->first();
 
-        if (! $channel) {
+        if (! $defaultChannel) {
 
             Notification::make()
                 ->title('Operational intake requires at least one channel. Please create a channel first.')
@@ -436,26 +444,32 @@ class HELOSImportCenter extends Page implements HasForms
             $line = $index + 2;
 
             if ($this->isRowEmpty($row)) {
+                $skipped++;
                 continue;
             }
+
+            $customerName = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['customer', 'customer name', 'name'],
+                2
+            ));
 
             $orderNo = trim(
                 (string) $this->getMappedValue(
                     $row,
                     $headerMap,
-                    ['order no', 'order number', 'order_no'],
+                    ['order no', 'order number', 'order_no', 'order id'],
                     0
                 )
             );
 
-            $phone = trim(
-                (string) $this->getMappedValue(
-                    $row,
-                    $headerMap,
-                    ['phone', 'mobile', 'customer phone'],
-                    3
-                )
-            );
+            $phone = $this->normalizePhoneValue((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['phone', 'mobile', 'customer phone'],
+                3
+            ));
 
             $orderDateRaw = trim(
                 (string) $this->getMappedValue(
@@ -469,9 +483,20 @@ class HELOSImportCenter extends Page implements HasForms
             $rawStatus = (string) $this->getMappedValue(
                 $row,
                 $headerMap,
-                ['operational status', 'status', 'delivery state'],
+                ['operational status', 'status', 'delivery state', 'csr status'],
                 8
             );
+
+            $confirmationStatus = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['confirmation state', 'verification status', 'confirmation'],
+                13
+            ));
+
+            if (trim($rawStatus) === '') {
+                $rawStatus = 'pending';
+            }
 
             $normalizedStatus = $this->normalizeOperationalStatusValue(
                 $rawStatus,
@@ -485,19 +510,36 @@ class HELOSImportCenter extends Page implements HasForms
                 6
             );
 
-            if ($orderNo === '' && $phone === '') {
+            $businessUnitName = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['business unit', 'business_unit', 'workspace_or_business_unit'],
+                15
+            ));
+
+            $channelName = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['service/channel', 'channel', 'service_or_pipeline'],
+                14
+            ));
+
+            $resolvedChannel = $channelMap[mb_strtolower($channelName)] ?? $defaultChannel;
+
+            if ($customerName === '' && $phone === '') {
                 $errors[] = "Row {$line}: Order No or Phone is required.";
+                $failed++;
                 continue;
             }
 
             if ($normalizedStatus === null) {
-                $errors[] = "Row {$line}: Unknown operational status '{$rawStatus}'.";
-                continue;
+                $normalizedStatus = 'pending';
             }
 
-            $orderDate = $orderDateRaw !== ''
-                ? $orderDateRaw
-                : now()->toDateTimeString();
+            $orderDate = $this->parseDateOrNull($orderDateRaw);
+            if ($orderDate === null) {
+                $orderDate = now()->toDateTimeString();
+            }
 
             $customer = Customer::firstOrCreate(
                 [
@@ -506,14 +548,7 @@ class HELOSImportCenter extends Page implements HasForms
                     ),
                 ],
                 [
-                    'name' => trim(
-                        (string) $this->getMappedValue(
-                            $row,
-                            $headerMap,
-                            ['customer name', 'customer'],
-                            2
-                        )
-                    ) ?: 'Unknown Customer',
+                    'name' => $customerName ?: 'Unknown Customer',
 
                     'phone' => $phone !== ''
                         ? $phone
@@ -543,7 +578,7 @@ class HELOSImportCenter extends Page implements HasForms
 
             $orderQuery = Order::query()
                 ->where('customer_id', $customer->id)
-                ->where('channel_id', $channel->id);
+                ->where('channel_id', $resolvedChannel->id);
 
             if ($orderNo !== '') {
 
@@ -567,14 +602,16 @@ class HELOSImportCenter extends Page implements HasForms
 
             if ($orderQuery->exists()) {
                 $errors[] = "Row {$line}: Duplicate operational order detected.";
+                $failed++;
                 continue;
             }
 
-            Order::create([
+            $order = Order::create([
                 'customer_id' => $customer->id,
-                'channel_id' => $channel->id,
+                'channel_id' => $resolvedChannel->id,
                 'external_order_no' => $orderNo ?: null,
                 'source' => 'manual',
+                'channel_reference' => $channelName !== '' ? $channelName : null,
                 'order_date' => $orderDate,
                 'total_amount' => $codAmount,
                 'payment_method' => 'cod',
@@ -606,14 +643,9 @@ class HELOSImportCenter extends Page implements HasForms
                     )
                 ) ?: null,
 
-                'verification_status' => trim(
-                    (string) $this->getMappedValue(
-                        $row,
-                        $headerMap,
-                        ['confirmation state', 'verification status'],
-                        13
-                    )
-                ) ?: 'pending',
+                'verification_status' => $confirmationStatus !== ''
+                    ? $confirmationStatus
+                    : 'pending',
 
                 'delivery_status' => $normalizedStatus,
 
@@ -631,6 +663,28 @@ class HELOSImportCenter extends Page implements HasForms
                 'user_id' => Auth::id(),
             ]);
 
+            $productText = trim((string) $this->getMappedValue(
+                $row,
+                $headerMap,
+                ['products', 'product text', 'product', 'sku'],
+                5
+            ));
+
+            $parsedItem = $this->parseOperationalProductText($productText);
+
+            if ($productText !== '') {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_name' => $parsedItem['name'],
+                    'sku' => $parsedItem['sku'],
+                    'quantity' => $parsedItem['quantity'],
+                    'unit_price' => $parsedItem['quantity'] > 0
+                        ? round($codAmount / $parsedItem['quantity'], 2)
+                        : $codAmount,
+                    'total_price' => $codAmount,
+                ]);
+            }
+
             $accepted++;
         }
 
@@ -639,15 +693,19 @@ class HELOSImportCenter extends Page implements HasForms
             count($rows) - 1,
             $accepted,
             $errors,
-            $context
+            array_merge($context, [
+                'summary' => compact('accepted', 'skipped', 'failed'),
+            ])
         );
 
         Notification::make()
-            ->title("Operational intake processed: {$accepted} accepted")
+            ->title("Operational intake processed: {$accepted} imported")
             ->body(
-                $errors === []
-                    ? 'Profile mapping, status normalization, and safe persistence completed.'
-                    : implode("\n", array_slice($errors, 0, 8))
+                "Total: " . (count($rows) - 1)
+                . " | Imported: {$accepted}"
+                . " | Skipped: {$skipped}"
+                . " | Failed: {$failed}"
+                . ($errors === [] ? '' : "\n" . implode("\n", array_slice($errors, 0, 8)))
             )
             ->success($errors === [])
             ->warning($errors !== [])
@@ -877,6 +935,66 @@ class HELOSImportCenter extends Page implements HasForms
         return $map;
     }
 
+    private function parseOperationalProductText(string $raw): array
+    {
+        $value = trim($raw);
+
+        if ($value === '') {
+            return [
+                'name' => 'Unknown Item',
+                'sku' => null,
+                'quantity' => 1,
+            ];
+        }
+
+        $quantity = 1;
+
+        if (preg_match('/(?:x|\*)\s*(\d+)$/i', $value, $matches) === 1) {
+            $quantity = max(1, (int) $matches[1]);
+            $value = trim((string) preg_replace('/(?:x|\*)\s*\d+$/i', '', $value));
+        }
+
+        $sku = null;
+
+        if (preg_match('/([A-Za-z0-9]+(?:[-_\/][A-Za-z0-9]+)+)/', $value, $matches) === 1) {
+            $sku = mb_strtoupper(trim($matches[1]));
+        } elseif (preg_match('/^[A-Za-z0-9]{4,}$/', $value) === 1) {
+            $sku = mb_strtoupper($value);
+        }
+
+        return [
+            'name' => $value,
+            'sku' => $sku,
+            'quantity' => $quantity,
+        ];
+    }
+
+    private function normalizePhoneValue(string $raw): string
+    {
+        $digits = preg_replace('/\D+/', '', $raw) ?? '';
+
+        if (str_starts_with($digits, '94') && strlen($digits) === 11) {
+            return '0' . substr($digits, 2);
+        }
+
+        return $digits;
+    }
+
+    private function parseDateOrNull(string $raw): ?string
+    {
+        $value = trim($raw);
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateTimeString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function getMappedValue(
         array $row,
         array $headerMap,
@@ -912,6 +1030,7 @@ class HELOSImportCenter extends Page implements HasForms
             'business_unit_id' => $context['business_unit_id'] ?? null,
             'business_type' => $context['business_type'] ?? 'general',
             'status_preset_keys' => array_keys($context['status_preset'] ?? []),
+            'summary' => $context['summary'] ?? null,
             'user_id' => Auth::id(),
             'timestamp' => now()->toDateTimeString(),
         ]);
@@ -977,7 +1096,8 @@ class HELOSImportCenter extends Page implements HasForms
             Notification::make()
                 ->title($successTitle . ' Failed: ' . count($errors) . '.')
                 ->body(
-                    implode(
+                    "Next step: open Orders to clear pending verification/dispatch queues.\n\n"
+                    . implode(
                         "\n",
                         array_slice($errors, 0, 8)
                     )
@@ -990,6 +1110,7 @@ class HELOSImportCenter extends Page implements HasForms
 
         Notification::make()
             ->title($successTitle)
+            ->body('Next step: open Order Operations Queue to progress verification, tracking, and delivery lifecycle states.')
             ->success()
             ->send();
     }

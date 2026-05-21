@@ -11,6 +11,16 @@ class ListDailyCODOperations extends ListRecords
 {
     protected static string $resource = DailyCODOperationResource::class;
 
+    protected function getTitle(): string
+    {
+        return 'Advanced COD Profitability Tracking';
+    }
+
+    protected function getSubheading(): ?string
+    {
+        return 'Use this advanced workspace for expected vs. actual COD performance analysis, not routine daily order entry.';
+    }
+
     protected function getActions(): array
     {
         return [

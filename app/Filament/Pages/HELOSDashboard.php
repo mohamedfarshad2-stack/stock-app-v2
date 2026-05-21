@@ -13,11 +13,16 @@ class HELOSDashboard extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'HELOS Core';
 
-    protected static ?string $navigationLabel = 'HELOS Dashboard';
+    protected static ?string $navigationLabel = 'Dashboard';
 
     protected static string $view = 'filament.pages.helos-dashboard';
+
+    protected function getSubheading(): ?string
+    {
+        return 'HELOS operational command center: track COD lifecycle, expected profitability signals, and monthly operating finance visibility.';
+    }
 
     public function getViewData(): array
     {
@@ -143,6 +148,55 @@ class HELOSDashboard extends Page
                 ->get()
             : collect();
 
+        $monthlyFinanceByCategory = $hasMoneyRecords
+            ? MoneyRecord::query()
+                ->select(
+                    'finance_categories.name',
+                    DB::raw(
+                        "SUM(CASE WHEN money_records.type = 'income' THEN money_records.amount ELSE 0 END) as income_total"
+                    ),
+                    DB::raw(
+                        "SUM(CASE WHEN money_records.type = 'expense' THEN money_records.amount ELSE 0 END) as expense_total"
+                    )
+                )
+                ->join(
+                    'finance_categories',
+                    'finance_categories.id',
+                    '=',
+                    'money_records.finance_category_id'
+                )
+                ->whereBetween('money_records.record_date', [$start, $end])
+                ->groupBy('finance_categories.name')
+                ->orderByDesc(DB::raw('income_total + expense_total'))
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $monthlyFinanceByBusinessUnit = $hasMoneyRecords
+            && Schema::hasTable('business_units')
+            ? MoneyRecord::query()
+                ->select(
+                    'business_units.name',
+                    DB::raw(
+                        "SUM(CASE WHEN money_records.type = 'income' THEN money_records.amount ELSE 0 END) as income_total"
+                    ),
+                    DB::raw(
+                        "SUM(CASE WHEN money_records.type = 'expense' THEN money_records.amount ELSE 0 END) as expense_total"
+                    )
+                )
+                ->join(
+                    'business_units',
+                    'business_units.id',
+                    '=',
+                    'money_records.business_unit_id'
+                )
+                ->whereBetween('money_records.record_date', [$start, $end])
+                ->groupBy('business_units.name')
+                ->orderByDesc(DB::raw('income_total - expense_total'))
+                ->limit(10)
+                ->get()
+            : collect();
+
         return [
             'kpis' => [
                 [
@@ -176,6 +230,10 @@ class HELOSDashboard extends Page
             'highRiskProducts' => $highRiskProducts,
 
             'businessUnitSummary' => $businessUnitSummary,
+
+            'monthlyFinanceByCategory' => $monthlyFinanceByCategory,
+
+            'monthlyFinanceByBusinessUnit' => $monthlyFinanceByBusinessUnit,
         ];
     }
 }

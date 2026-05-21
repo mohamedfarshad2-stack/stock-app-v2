@@ -17,8 +17,8 @@ class CustomerIntelligence extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Customer Intelligence';
-    protected static ?string $navigationGroup = 'COD Engine';
-    protected static ?int $navigationSort = 4;
+    protected static ?string $navigationGroup = 'Legacy';
+    protected static ?int $navigationSort = 999;
     protected static string $view = 'filament.pages.customer-intelligence';
 
     public ?string $search = null;
@@ -29,6 +29,11 @@ class CustomerIntelligence extends Page implements HasForms
         $this->form->fill([
             'search' => '',
         ]);
+    }
+
+    protected static function shouldRegisterNavigation(): bool
+    {
+        return false;
     }
 
  protected function getFormSchema(): array

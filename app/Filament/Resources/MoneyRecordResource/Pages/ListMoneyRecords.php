@@ -14,6 +14,16 @@ class ListMoneyRecords extends ListRecords
 {
     protected static string $resource = MoneyRecordResource::class;
 
+    protected function getTitle(): string
+    {
+        return 'Operational Finance Visibility';
+    }
+
+    protected function getSubheading(): ?string
+    {
+        return 'Track monthly income, direct costs, and overhead context for operational profitability decisions.';
+    }
+
     protected function getActions(): array
     {
         return [

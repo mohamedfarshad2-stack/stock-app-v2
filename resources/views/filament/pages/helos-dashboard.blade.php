@@ -1,4 +1,16 @@
 <x-filament::page>
+    <div class="mb-4 text-sm text-gray-600">
+        HELOS command center summary for COD operations and expected profitability signals.
+    </div>
+
+    <x-filament::card class="mb-4">
+        <h3 class="font-semibold mb-2">Operational Focus: Next Actions</h3>
+        <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+            <li>Review <a class="text-primary-600 underline" href="{{ \App\Filament\Resources\OrderResource::getUrl() }}">Order Operations Queue</a> for pending verification, dispatch tracking, and exceptions.</li>
+            <li>Use <a class="text-primary-600 underline" href="{{ \App\Filament\Pages\HELOSImportCenter::getUrl() }}">Import Center</a> for daily intake, then return to Orders to progress lifecycle states.</li>
+            <li>Update <a class="text-primary-600 underline" href="{{ \App\Filament\Resources\MoneyRecordResource::getUrl() }}">Transactions</a> for monthly operational finance visibility and overhead context.</li>
+        </ul>
+    </x-filament::card>
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach($kpis as $kpi)
             <x-filament::card>
@@ -31,6 +43,39 @@
             @foreach($businessUnitSummary as $item)
                 <div class="flex justify-between text-sm py-1"><span>{{ $item->name }}</span><span>Rs. {{ number_format($item->expected_profit, 2) }}</span></div>
             @endforeach
+        </x-filament::card>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 mt-6 lg:grid-cols-2">
+        <x-filament::card>
+            <h3 class="font-semibold mb-3">Monthly operational finance summary by category</h3>
+            @forelse($monthlyFinanceByCategory as $item)
+                <div class="flex justify-between text-sm py-1">
+                    <span>{{ $item->name }}</span>
+                    <span>
+                        +Rs. {{ number_format((float) $item->income_total, 2) }}
+                        /
+                        -Rs. {{ number_format((float) $item->expense_total, 2) }}
+                    </span>
+                </div>
+            @empty
+                <p class="text-sm text-gray-500">No monthly operational finance records yet.</p>
+            @endforelse
+        </x-filament::card>
+
+        <x-filament::card>
+            <h3 class="font-semibold mb-3">Monthly BU-wise operating finance summary</h3>
+            @forelse($monthlyFinanceByBusinessUnit as $item)
+                @php
+                    $net = (float) $item->income_total - (float) $item->expense_total;
+                @endphp
+                <div class="flex justify-between text-sm py-1">
+                    <span>{{ $item->name }}</span>
+                    <span>Rs. {{ number_format($net, 2) }}</span>
+                </div>
+            @empty
+                <p class="text-sm text-gray-500">No monthly business-unit operating finance records yet.</p>
+            @endforelse
         </x-filament::card>
     </div>
 </x-filament::page>

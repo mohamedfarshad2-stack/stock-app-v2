@@ -20,6 +20,8 @@ use Filament\Resources\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\TextInputColumn;
+use Filament\Tables\Columns\SelectColumn;
 
 class OrderResource extends Resource
 {
@@ -27,21 +29,21 @@ class OrderResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static ?string $navigationGroup = 'Order Management';
-
-      protected static function shouldRegisterNavigation(): bool
-    {
-        return auth()->user()?->role === 1;
-    }
+    protected static ?string $navigationGroup = 'HELOS Core';
+    protected static bool $shouldRegisterNavigation = true;
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role === 1;
+        return true;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return true;
     }
 
     public static function form(Form $form): Form
     {
-        // dd($form);
         return $form->schema([
 
             Select::make('customer_id')
@@ -52,18 +54,6 @@ class OrderResource extends Resource
                 ->reactive()
                 ->getOptionLabelFromRecordUsing(fn ($record) => $record->name.' - '.$record->phone),
 
-            // Placeholder::make('customer_history')
-            //     ->label('Customer History')
-            //     ->content(function ($get) {
-
-            //         $customer = \App\Models\Customer::find($get('customer_id'));
-
-            //         if (!$customer) {
-            //             return 'No customer selected';
-            //         }
-
-            //         return "Orders: {$customer->total_orders} | Returns: {$customer->returned_orders} | Risk: {$customer->risk_level}";
-            //     }),
             Placeholder::make('customer_history')
     ->label('Customer History')
     ->content(function ($get) {
@@ -98,6 +88,16 @@ class OrderResource extends Resource
             Select::make('channel_id')
                 ->relationship('channel','name')
                 ->required(),
+
+            TextInput::make('external_order_no')
+                ->label('Order No')
+                ->maxLength(255),
+
+            TextInput::make('channel_reference')
+                ->label('Tracking / Reference')
+                ->helperText('Used for dispatch tracking in the operational delivery lifecycle.')
+                ->reactive()
+                ->maxLength(255),
 
             DatePicker::make('order_date')
                 ->default(now())
@@ -180,6 +180,26 @@ class OrderResource extends Resource
                 ->dehydrated()
                 ->default(0),
 
+            Select::make('verification_status')
+                ->options([
+                    'pending' => 'Pending',
+                    'confirmed' => 'Confirmed',
+                    'no_answer' => 'No Answer',
+                    'call_back' => 'Call Back',
+                ])
+                ->default('pending'),
+
+            Select::make('delivery_status')
+                ->helperText('Operational lifecycle state for COD execution.')
+                ->options([
+                    'pending' => 'Pending',
+                    'dispatched' => 'Dispatched',
+                    'delivered' => 'Delivered',
+                    'returned' => 'Returned',
+                    'cancelled' => 'Cancelled',
+                ])
+                ->default('pending'),
+
         ]);
     }
 
@@ -211,8 +231,29 @@ class OrderResource extends Resource
             TextColumn::make('order_date')
                 ->date(),
 
+            TextColumn::make('external_order_no')
+                ->label('Order No')
+                ->searchable(),
+
+            TextInputColumn::make('channel_reference')
+                ->label('Tracking / Ref')
+                ->rules(['nullable', 'string', 'max:255']),
+
             TextColumn::make('total_amount')
                 ->label('Amount'),
+
+            BadgeColumn::make('verification_status')
+                ->label('Confirmation'),
+
+            SelectColumn::make('delivery_status')
+                ->label('Delivery')
+                ->options([
+                    'pending' => 'Pending',
+                    'dispatched' => 'Dispatched',
+                    'delivered' => 'Delivered',
+                    'returned' => 'Returned',
+                    'cancelled' => 'Cancelled',
+                ]),
 
             BadgeColumn::make('risk_level')
                 ->colors([
@@ -222,51 +263,54 @@ class OrderResource extends Resource
                     'danger' => 'very_high'
                 ]),
 
-            BadgeColumn::make('delivery_status')
-                ->colors([
-                    'primary' => 'pending',
-                    'warning' => 'shipped',
-                    'success' => 'delivered',
-                    'danger' => 'returned'
-                ]),
-
             TextColumn::make('created_at')
                 ->dateTime(),
 
+        ])->filters([
+            Tables\Filters\SelectFilter::make('delivery_status')
+                ->label('Delivery Queue')
+                ->options([
+                    'pending' => 'Pending Dispatch',
+                    'dispatched' => 'Dispatched',
+                    'delivered' => 'Delivered',
+                    'returned' => 'Returned',
+                    'cancelled' => 'Cancelled',
+                ]),
+            Tables\Filters\SelectFilter::make('verification_status')
+                ->label('Verification Queue')
+                ->options([
+                    'pending' => 'Pending',
+                    'confirmed' => 'Confirmed',
+                    'no_answer' => 'No Answer',
+                    'call_back' => 'Call Back',
+                ]),
+        ])->actions([
+            Tables\Actions\ViewAction::make(),
+            Tables\Actions\EditAction::make(),
+            Tables\Actions\Action::make('markDelivered')
+                ->label('Mark Delivered')
+                ->icon('heroicon-o-check-circle')
+                ->color('success')
+                ->requiresConfirmation()
+                ->action(function ($record) {
+                    $record->delivery_status = 'delivered';
+                    $record->save();
+                })
+                ->visible(fn ($record) => $record->delivery_status !== 'delivered'),
+            Tables\Actions\Action::make('cancelOrder')
+                ->label('Mark Cancelled')
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->action(function ($record) {
+                    $record->delivery_status = 'cancelled';
+                    $record->save();
+                })
+                ->visible(fn ($record) => $record->delivery_status !== 'cancelled'),
         ])
-        // ->actions([
-        //     Tables\Actions\ViewAction::make(),
-        //     Tables\Actions\EditAction::make(),
-        // ])
-        ->actions([
-    Tables\Actions\ViewAction::make(),
-
-    Tables\Actions\EditAction::make(),
-
-    // ✅ Mark as Delivered
-    Tables\Actions\Action::make('markDelivered')
-        ->label('Delivered')
-        ->icon('heroicon-o-check-circle')
-        ->color('success')
-        ->requiresConfirmation()
-        ->action(function ($record) {
-            $record->delivery_status = 'delivered';
-            $record->save();
-        })
-        ->visible(fn ($record) => $record->delivery_status !== 'delivered'),
-
-    // ❌ Cancel Order
-    Tables\Actions\Action::make('cancelOrder')
-        ->label('Cancel')
-        ->icon('heroicon-o-x-circle')
-        ->color('danger')
-        ->requiresConfirmation()
-        ->action(function ($record) {
-            $record->delivery_status = 'cancelled';
-            $record->save();
-        })
-        ->visible(fn ($record) => $record->delivery_status !== 'cancelled'),
-])
+        ->defaultSort('order_date', 'desc')
+        ->emptyStateHeading('No orders in this queue yet')
+        ->emptyStateDescription('Use Import Center for bulk operational intake or create a manual exception order.')
         ->bulkActions([
             Tables\Actions\DeleteBulkAction::make(),
         ]);

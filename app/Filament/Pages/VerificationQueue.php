@@ -17,7 +17,7 @@ class VerificationQueue extends Page implements HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-phone';
 
-    protected static ?string $navigationGroup = 'Order Management';
+    protected static ?string $navigationGroup = 'Legacy';
 
     protected static ?string $title = 'Verification Queue';
 
@@ -25,7 +25,7 @@ class VerificationQueue extends Page implements HasTable
 
       protected static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->role === 1;
+        return false;
     }
 
     public static function canAccess(): bool

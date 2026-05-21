@@ -16,7 +16,7 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
     protected static ?string $navigationLabel = 'SKU Cost Master';
     protected static ?string $navigationIcon = 'heroicon-o-collection';
-    protected static ?string $navigationGroup = 'HELOS';
+    protected static ?string $navigationGroup = 'HELOS Core';
 
     public static function form(Form $form): Form
     {
@@ -32,7 +32,10 @@ class ProductResource extends Resource
             Forms\Components\TextInput::make('expected_courier_cost')->numeric()->label('Courier Cost'),
             Forms\Components\TextInput::make('packaging_cost')->numeric()->default(0),
             Forms\Components\TextInput::make('advertisement_allocation')->numeric()->default(0),
-            Forms\Components\TextInput::make('operational_overhead')->numeric()->default(0),
+            Forms\Components\TextInput::make('operational_overhead')
+                ->numeric()
+                ->default(0)
+                ->helperText('Use for SKU-level operational burden only. Company-wide salaries/admin overhead should stay in monthly Finance, not forced into per-order margin.'),
             Forms\Components\TextInput::make('return_loss_estimate')->numeric()->default(0),
             Forms\Components\TextInput::make('weight')->numeric(),
             Forms\Components\Toggle::make('is_active')->default(true),

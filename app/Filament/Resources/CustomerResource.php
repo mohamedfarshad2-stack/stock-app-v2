@@ -28,11 +28,11 @@ class CustomerResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Customer Intelligence';
+    protected static ?string $navigationGroup = 'Legacy';
 
       protected static function shouldRegisterNavigation(): bool
     {
-        return auth()->user()?->role === 1;
+        return false;
     }
 
     public static function canAccess(): bool
