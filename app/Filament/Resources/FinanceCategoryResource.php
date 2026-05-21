@@ -42,7 +42,10 @@ class FinanceCategoryResource extends Resource
             Forms\Components\Select::make('type')
                 ->options(self::TYPE_OPTIONS)
                 ->default('expense')
-                ->required(),
+                ->required()
+                ->helperText(
+                    'Use categories for operational finance classification; avoid generic accounting chart-of-accounts expansion.'
+                ),
 
             Forms\Components\Select::make('parent_id')
                 ->label('Parent Category')

@@ -22,6 +22,8 @@ class MoneyRecordResource extends Resource
 
     protected static ?string $navigationLabel = 'Transactions';
 
+    protected static ?string $recordTitleAttribute = 'description';
+
     private const TYPE_OPTIONS = [
         'income' => 'Income',
         'expense' => 'Direct / Overhead Cost',
@@ -72,7 +74,9 @@ class MoneyRecordResource extends Resource
                 })
                 ->searchable()
                 ->required()
-                ->helperText('Categories are filtered by selected transaction type for simpler finance entry.'),
+                ->helperText(
+                    'Categories are filtered by selected transaction type for simpler finance entry.'
+                ),
 
             Forms\Components\TextInput::make('amount')
                 ->numeric()
@@ -87,6 +91,11 @@ class MoneyRecordResource extends Resource
 
             Forms\Components\Textarea::make('description')
                 ->rows(4),
+
+            Forms\Components\Placeholder::make('finance_scope_note')
+                ->content(
+                    'HELOS Finance is for operational money visibility (income, direct costs, and monthly overhead). It is not a full accounting/ERP ledger.'
+                ),
 
             Forms\Components\Select::make('status')
                 ->options([

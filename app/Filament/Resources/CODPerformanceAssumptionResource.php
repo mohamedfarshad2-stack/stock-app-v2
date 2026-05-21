@@ -34,7 +34,7 @@ class CODPerformanceAssumptionResource extends Resource
         return $form->schema([
             Forms\Components\Placeholder::make('info')
                 ->content(
-                    'This module stores historical COD performance assumptions based on previous operational results. These values help estimate expected courier costs and expected return percentages for forecasting purposes.'
+                    'Advanced assumptions module: stores COD performance baselines from historical operations to improve expected courier and return-rate forecasting in HELOS.'
                 ),
 
             Forms\Components\Select::make('business_unit_id')

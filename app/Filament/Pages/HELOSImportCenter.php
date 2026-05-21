@@ -55,7 +55,7 @@ class HELOSImportCenter extends Page implements HasForms
                 ->default('operations')
                 ->required()
                 ->reactive()
-                ->helperText('Choose one import type at a time to keep uploads simple and clear.'),
+                ->helperText('Operational intake entry point: import one dataset at a time to keep order and finance pipelines clean.'),
 
             Forms\Components\FileUpload::make('file')
                 ->label(fn (callable $get) => match ((string) $get('import_profile')) {
@@ -79,7 +79,7 @@ class HELOSImportCenter extends Page implements HasForms
                 )
                 ->searchable()
                 ->visible(fn (callable $get) => (string) $get('import_profile') === 'operations')
-                ->helperText('Optional: used as default context for adaptive import routing and validation.'),
+                ->helperText('Optional: default BU context for operational order intake validation and routing.'),
         ];
     }
 
@@ -1096,7 +1096,8 @@ class HELOSImportCenter extends Page implements HasForms
             Notification::make()
                 ->title($successTitle . ' Failed: ' . count($errors) . '.')
                 ->body(
-                    implode(
+                    "Next step: open Orders to clear pending verification/dispatch queues.\n\n"
+                    . implode(
                         "\n",
                         array_slice($errors, 0, 8)
                     )
@@ -1109,6 +1110,7 @@ class HELOSImportCenter extends Page implements HasForms
 
         Notification::make()
             ->title($successTitle)
+            ->body('Next step: open Order Operations Queue to progress verification, tracking, and delivery lifecycle states.')
             ->success()
             ->send();
     }

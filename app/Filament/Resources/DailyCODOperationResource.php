@@ -18,7 +18,7 @@ class DailyCODOperationResource extends Resource
 
     protected static ?string $navigationGroup = 'Advanced';
 
-    protected static ?string $navigationLabel = 'Daily COD Operations';
+    protected static ?string $navigationLabel = 'COD Operations';
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
@@ -28,6 +28,11 @@ class DailyCODOperationResource extends Resource
 
             Forms\Components\DatePicker::make('operation_date')
                 ->required(),
+
+            Forms\Components\Placeholder::make('advanced_scope_note')
+                ->content(
+                    'Advanced module: use for expected COD profitability tracking and scenario accuracy, not as the default daily order-entry screen.'
+                ),
 
             Forms\Components\TextInput::make('order_code')
                 ->label('Order Code')
@@ -51,7 +56,9 @@ class DailyCODOperationResource extends Resource
                     }
 
                     $set('selling_price', $product->selling_price);
+
                     $set('product_cost', $product->product_cost);
+
                     $set('courier_cost', $product->expected_courier_cost);
 
                     $set(
@@ -65,7 +72,6 @@ class DailyCODOperationResource extends Resource
                             : 0
                     );
 
-                    // Expected Profit Auto Calculation
                     $expectedProfit =
                         ($product->selling_price ?? 0)
                         - ($product->product_cost ?? 0)

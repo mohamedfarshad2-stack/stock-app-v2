@@ -19,6 +19,11 @@ class HELOSDashboard extends Page
 
     protected static string $view = 'filament.pages.helos-dashboard';
 
+    protected function getSubheading(): ?string
+    {
+        return 'HELOS operational command center: track COD lifecycle, expected profitability signals, and monthly operating finance visibility.';
+    }
+
     public function getViewData(): array
     {
         $today = now()->toDateString();

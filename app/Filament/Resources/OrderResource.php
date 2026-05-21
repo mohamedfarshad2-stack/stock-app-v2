@@ -115,6 +115,9 @@ class OrderResource extends Resource
 
             TextInput::make('channel_reference')
                 ->label('Tracking / Reference')
+                ->helperText(
+                    'Used for dispatch tracking in the operational delivery lifecycle.'
+                )
                 ->reactive()
                 ->maxLength(255),
 
@@ -225,6 +228,9 @@ class OrderResource extends Resource
                 ->default('pending'),
 
             Select::make('delivery_status')
+                ->helperText(
+                    'Operational lifecycle state for COD execution.'
+                )
                 ->options([
                     'pending' => 'Pending',
                     'dispatched' => 'Dispatched',
@@ -323,6 +329,28 @@ class OrderResource extends Resource
                     ->dateTime(),
 
             ])
+            ->filters([
+
+                Tables\Filters\SelectFilter::make('delivery_status')
+                    ->label('Delivery Queue')
+                    ->options([
+                        'pending' => 'Pending Dispatch',
+                        'dispatched' => 'Dispatched',
+                        'delivered' => 'Delivered',
+                        'returned' => 'Returned',
+                        'cancelled' => 'Cancelled',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('verification_status')
+                    ->label('Verification Queue')
+                    ->options([
+                        'pending' => 'Pending',
+                        'confirmed' => 'Confirmed',
+                        'no_answer' => 'No Answer',
+                        'call_back' => 'Call Back',
+                    ]),
+
+            ])
             ->actions([
 
                 Tables\Actions\ViewAction::make(),
@@ -330,7 +358,7 @@ class OrderResource extends Resource
                 Tables\Actions\EditAction::make(),
 
                 Tables\Actions\Action::make('markDelivered')
-                    ->label('Delivered')
+                    ->label('Mark Delivered')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
@@ -346,7 +374,7 @@ class OrderResource extends Resource
                     ),
 
                 Tables\Actions\Action::make('cancelOrder')
-                    ->label('Cancel')
+                    ->label('Mark Cancelled')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -362,6 +390,11 @@ class OrderResource extends Resource
                     ),
 
             ])
+            ->defaultSort('order_date', 'desc')
+            ->emptyStateHeading('No orders in this queue yet')
+            ->emptyStateDescription(
+                'Use Import Center for bulk operational intake or create a manual exception order.'
+            )
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
